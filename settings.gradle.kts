@@ -24,4 +24,10 @@ dependencyResolutionManagement {
 
 rootProject.name = "TripFlow"
 include(":app")
- 
+
+include(":core:core-model")
+include(":core:core-network")
+include(":core:core-auth")
+include(":core:core-ui")
+include(":feature:feature-booking")
+include(":feature:feature-review")
