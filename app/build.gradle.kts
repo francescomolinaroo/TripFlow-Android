@@ -51,6 +51,7 @@ dependencies {
     implementation(project(":feature:feature-booking"))
     implementation(project(":feature:feature-review"))
     implementation(project(":feature:feature-auth"))
+    implementation(project(":feature:feature-itinerary"))
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
