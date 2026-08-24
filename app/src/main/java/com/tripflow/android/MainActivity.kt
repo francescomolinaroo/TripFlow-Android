@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.*
@@ -14,11 +13,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tripflow.core.ui.theme.TripFlowTheme
-import com.tripflow.feature.booking.BookingListScreen
-import com.tripflow.feature.booking.BookingScreen
+import com.tripflow.feature.booking.ui.BookingListScreen
+import com.tripflow.feature.booking.ui.BookingScreen
 import com.tripflow.feature.auth.LoginScreen
 import com.tripflow.feature.auth.RegisterScreen
 import com.tripflow.feature.auth.UserDashboardScreen
+import com.tripflow.feature.review.ReviewListScreen
+import com.tripflow.feature.review.WriteReviewScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,7 +33,10 @@ class MainActivity : ComponentActivity() {
                     when (currentScreen) {
                         "menu" -> MenuScreen(onNavigate = { currentScreen = it })
                         "booking_form" -> BookingScreen(onBack = { currentScreen = "menu" })
-                        "booking_list" -> BookingListScreen(onBookingClick = { currentScreen = "menu" })
+                        "booking_list" -> BookingListScreen(
+                            onBookingClick = { currentScreen = "menu" },
+                            onWriteReviewClick = { currentScreen = "write_review" }
+                        )
                         "login" -> LoginScreen(
                             onLoginClick = { currentScreen = "dashboard" },
                             onRegisterClick = { currentScreen = "register" },
@@ -46,8 +50,8 @@ class MainActivity : ComponentActivity() {
                             onLogoutClick = { currentScreen = "login" },
                             onBookingsClick = { currentScreen = "booking_list" }
                         )
-                        //"review_list" -> ReviewListScreen(onBack = { currentScreen = "menu" }) in arrivo
-                        //"write_review" -> WriteReviewScreen(onBack = { currentScreen = "menu" }) in arrivo
+                        "review_list" -> ReviewListScreen(onBack = { currentScreen = "menu" })
+                        "write_review" -> WriteReviewScreen(onBack = { currentScreen = "menu" })
                     }
                 }
             }
@@ -80,12 +84,12 @@ fun MenuScreen(onNavigate: (String) -> Unit) { //menu temporaneo per provare le 
             Button(onClick = { onNavigate("register") }, modifier = Modifier.fillMaxWidth()) {
                 Text("Registrati")
             }
-            //Button(onClick = { onNavigate("review_list") }, modifier = Modifier.fillMaxWidth()) {
-                //Text("Review List")
-            //}
-            //Button(onClick = { onNavigate("write_review") }, modifier = Modifier.fillMaxWidth()) {
-                //Text("Write Review")
-            //}
+            Button(onClick = { onNavigate("review_list") }, modifier = Modifier.fillMaxWidth()) {
+                Text("Review")
+            }
+            Button(onClick = { onNavigate("write_review") }, modifier = Modifier.fillMaxWidth()) {
+                Text("Write Review")
+            }
         }
     }
 }
