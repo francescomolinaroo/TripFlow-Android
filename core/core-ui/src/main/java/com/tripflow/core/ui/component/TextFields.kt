@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -118,11 +119,15 @@ fun TripFlowTextArea(
     maxChars: Int,
     modifier: Modifier = Modifier,
     placeholder: String = "",
+    error: String? = null,
     minHeight: Dp = 96.dp,
 ) {
     val shape = RoundedCornerShape(Dimens.radiusField)
-    val borderColor =
-        if (value.isNotEmpty()) TripFlowColors.Accent else TripFlowColors.Border
+    val borderColor = when {
+        error != null -> TripFlowColors.FieldError
+        value.isNotEmpty() -> TripFlowColors.Accent
+        else -> TripFlowColors.Border
+    }
 
     Column(modifier = modifier.fillMaxWidth()) {
 
@@ -144,7 +149,7 @@ fun TripFlowTextArea(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(TripFlowColors.Background, shape)
-                        .border(if (value.isEmpty()) 1.dp else 1.5.dp, borderColor, shape)
+                        .border(if (error != null || value.isNotEmpty()) 1.5.dp else 1.dp, borderColor, shape)
                         .padding(horizontal = 14.dp, vertical = 13.dp),
                 ) {
                     if (value.isEmpty() && placeholder.isNotEmpty()) {
@@ -159,12 +164,26 @@ fun TripFlowTextArea(
             },
         )
 
-        Text(
-            text = "${value.length} / $maxChars",
-            style = MaterialTheme.typography.bodySmall,
-            color = TripFlowColors.TextDisabled,
+        Row(
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-            textAlign = TextAlign.End,
-        )
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            if (error != null) {
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TripFlowColors.FieldError,
+                    modifier = Modifier.weight(1f)
+                )
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+            Text(
+                text = "${value.length} / $maxChars",
+                style = MaterialTheme.typography.bodySmall,
+                color = TripFlowColors.TextDisabled,
+                textAlign = TextAlign.End,
+            )
+        }
     }
 }

@@ -30,15 +30,19 @@ import com.tripflow.core.ui.theme.TripFlowTheme
 
 @Composable
 fun BookingListScreen(
-    onBookingClick: (String) -> Unit = {}
+    onBookingClick: (String) -> Unit = {},
+    onWriteReviewClick: (String) -> Unit = {}
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Attive", "Tutte")
 
     Scaffold(
         topBar = {
-            Column(modifier = Modifier.background(TripFlowColors.Background)) {
-                Text( //da sistemare, troppo alto
+            Column(modifier = Modifier
+                .background(TripFlowColors.Background)
+                .statusBarsPadding()
+            ) {
+                Text(
                     text = "Le mie prenotazioni",
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.padding(horizontal = Dimens.screenPadding, vertical = 16.dp),
@@ -123,7 +127,11 @@ fun BookingListScreen(
             verticalArrangement = Arrangement.spacedBy(Dimens.gapXL)
         ) {
             items(bookings) { booking ->
-                BookingCard(booking = booking, onClick = { onBookingClick(booking.id) })
+                BookingCard(
+                    booking = booking,
+                    onClick = { onBookingClick(booking.id) },
+                    onActionClick = { onWriteReviewClick(booking.id)}
+                )
             }
         }
     }
@@ -142,7 +150,11 @@ data class BookingUi(
 )
 
 @Composable
-fun BookingCard(booking: BookingUi, onClick: () -> Unit) {
+fun BookingCard(
+    booking: BookingUi,
+    onClick: () -> Unit,
+    onActionClick: () -> Unit
+) {
     val shape = RoundedCornerShape(Dimens.radiusCard)
     Column(
         modifier = Modifier
@@ -188,7 +200,9 @@ fun BookingCard(booking: BookingUi, onClick: () -> Unit) {
         if (booking.action != null) {
             HorizontalDivider(color = TripFlowColors.Divider)
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onActionClick() },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {

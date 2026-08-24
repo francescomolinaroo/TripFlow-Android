@@ -122,23 +122,15 @@ fun BookingScreen(
                 )
             }
 
+            Spacer(modifier = Modifier.height(Dimens.gapM))
+
             Section(title = "RIEPILOGO") {
                 SummaryRow("Viaggio € 480 x $participants", "€ ${480 * participants}")
                 activities.filter { it.isSelected }.forEach { activity ->
                     SummaryRow("${activity.name} € ${activity.price} x $participants", "€ ${activity.price * participants}")
                 }
-                HorizontalDivider(modifier = Modifier.padding(vertical = Dimens.gapS), color = TripFlowColors.Border)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Totale", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(
-                        "€ ${480 * participants + activities.filter { it.isSelected }.sumOf { it.price * participants }}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = Dimens.gapL),  color = TripFlowColors.Border)
+
             }
             
             Spacer(modifier = Modifier.height(80.dp))
@@ -280,7 +272,7 @@ fun BookingBottomBar(totalPrice: Int, onPaymentClick: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(Dimens.gapL)
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("totale", style = MaterialTheme.typography.labelSmall, color = TripFlowColors.TextSecondary)
+                Text("Totale", style = MaterialTheme.typography.labelSmall, color = TripFlowColors.TextSecondary)
                 Text("€ $totalPrice", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             }
             PrimaryButton(
