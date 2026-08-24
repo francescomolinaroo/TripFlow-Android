@@ -16,8 +16,8 @@ import androidx.compose.ui.unit.dp
 import com.tripflow.core.ui.theme.TripFlowTheme
 import com.tripflow.feature.booking.BookingListScreen
 import com.tripflow.feature.booking.BookingScreen
-import com.tripflow.feature.review.ReviewListScreen
-import com.tripflow.feature.review.WriteReviewScreen
+import com.tripflow.feature.auth.LoginScreen
+import com.tripflow.feature.auth.RegisterScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,6 +32,14 @@ class MainActivity : ComponentActivity() {
                         "menu" -> MenuScreen(onNavigate = { currentScreen = it })
                         "booking_form" -> BookingScreen(onBack = { currentScreen = "menu" })
                         "booking_list" -> BookingListScreen(onBookingClick = { currentScreen = "menu" })
+                        "login" -> LoginScreen(
+                            onLoginClick = { currentScreen = "menu" },
+                            onRegisterClick = { currentScreen = "register" }
+                        )
+                        "register" -> RegisterScreen(
+                            onRegisterClick = { currentScreen = "login" },
+                            onLoginClick = { currentScreen = "login" }
+                        )
                         //"review_list" -> ReviewListScreen(onBack = { currentScreen = "menu" }) in arrivo
                         //"write_review" -> WriteReviewScreen(onBack = { currentScreen = "menu" }) in arrivo
                     }
@@ -59,6 +67,12 @@ fun MenuScreen(onNavigate: (String) -> Unit) { //menu temporaneo per provare le 
             }
             Button(onClick = { onNavigate("booking_list") }, modifier = Modifier.fillMaxWidth()) {
                 Text("My Bookings")
+            }
+            Button(onClick = { onNavigate("login") }, modifier = Modifier.fillMaxWidth()) {
+                Text("Login")
+            }
+            Button(onClick = { onNavigate("register") }, modifier = Modifier.fillMaxWidth()) {
+                Text("Registrati")
             }
             //Button(onClick = { onNavigate("review_list") }, modifier = Modifier.fillMaxWidth()) {
                 //Text("Review List")
