@@ -27,7 +27,8 @@ import com.tripflow.core.ui.theme.TripFlowTheme
 @Composable
 fun LoginScreen(
     onLoginClick: () -> Unit = {},
-    onRegisterClick: () -> Unit = {}
+    onRegisterClick: () -> Unit = {},
+    onContinueWithoutLogin: () -> Unit = {}
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -77,6 +78,10 @@ fun LoginScreen(
             SecondaryButton(
                 text = "Non hai un account? Registrati",
                 onClick = onRegisterClick
+            )
+            SecondaryButton(
+                text = "Continua senza accedere",
+                onClick = onContinueWithoutLogin
             )
         }
     }

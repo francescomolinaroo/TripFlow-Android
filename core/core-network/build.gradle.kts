@@ -25,6 +25,8 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.core.ktx)
     implementation(libs.material)
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
     implementation(project(":core:core-model"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)

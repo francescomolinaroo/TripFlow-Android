@@ -18,6 +18,7 @@ import com.tripflow.feature.booking.BookingListScreen
 import com.tripflow.feature.booking.BookingScreen
 import com.tripflow.feature.auth.LoginScreen
 import com.tripflow.feature.auth.RegisterScreen
+import com.tripflow.feature.auth.UserDashboardScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,12 +34,17 @@ class MainActivity : ComponentActivity() {
                         "booking_form" -> BookingScreen(onBack = { currentScreen = "menu" })
                         "booking_list" -> BookingListScreen(onBookingClick = { currentScreen = "menu" })
                         "login" -> LoginScreen(
-                            onLoginClick = { currentScreen = "menu" },
-                            onRegisterClick = { currentScreen = "register" }
+                            onLoginClick = { currentScreen = "dashboard" },
+                            onRegisterClick = { currentScreen = "register" },
+                            onContinueWithoutLogin = { currentScreen = "menu" }
                         )
                         "register" -> RegisterScreen(
                             onRegisterClick = { currentScreen = "login" },
                             onLoginClick = { currentScreen = "login" }
+                        )
+                        "dashboard" -> UserDashboardScreen(
+                            onLogoutClick = { currentScreen = "login" },
+                            onBookingsClick = { currentScreen = "booking_list" }
                         )
                         //"review_list" -> ReviewListScreen(onBack = { currentScreen = "menu" }) in arrivo
                         //"write_review" -> WriteReviewScreen(onBack = { currentScreen = "menu" }) in arrivo
