@@ -18,6 +18,7 @@ import com.tripflow.feature.booking.ui.BookingScreen
 import com.tripflow.feature.auth.LoginScreen
 import com.tripflow.feature.auth.RegisterScreen
 import com.tripflow.feature.auth.UserDashboardScreen
+import com.tripflow.feature.itinerary.ui.myitineraries.MyItinerariesScreen
 import com.tripflow.feature.review.ReviewListScreen
 import com.tripflow.feature.review.WriteReviewScreen
 
@@ -37,6 +38,7 @@ class MainActivity : ComponentActivity() {
                             onBookingClick = { currentScreen = "menu" },
                             onWriteReviewClick = { currentScreen = "write_review" }
                         )
+                        "itinerary_list" -> MyItinerariesScreen(onCreateNewClick = { /* TODO */ })
                         "login" -> LoginScreen(
                             onLoginClick = { currentScreen = "dashboard" },
                             onRegisterClick = { currentScreen = "register" },
@@ -89,6 +91,9 @@ fun MenuScreen(onNavigate: (String) -> Unit) { //menu temporaneo per provare le 
             }
             Button(onClick = { onNavigate("write_review") }, modifier = Modifier.fillMaxWidth()) {
                 Text("Write Review")
+            }
+            Button(onClick = { onNavigate("itinerary_list") }, modifier = Modifier.fillMaxWidth()) {
+                Text("I miei Itinerari")
             }
         }
     }

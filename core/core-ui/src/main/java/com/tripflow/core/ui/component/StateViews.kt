@@ -28,6 +28,7 @@ fun <T> StateHost(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
     emptyTitle: String = "Non c'è ancora niente",
+    emptyMessage: String? = null,
     emptyActionLabel: String? = null,
     onEmptyAction: (() -> Unit)? = null,
     loading: @Composable () -> Unit = { LoadingList() },
@@ -44,7 +45,7 @@ fun <T> StateHost(
     Box(modifier = modifier.fillMaxSize()) {
         when (state) {
             is UiState.Loading -> loading()
-            is UiState.Empty -> empty(state.message)
+            is UiState.Empty -> empty(emptyMessage ?: state.message)
             is UiState.Error -> ErrorState(
                 message = state.message,
                 onRetry = onRetry.takeIf { state.retryable },
