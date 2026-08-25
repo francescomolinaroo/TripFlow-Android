@@ -1,5 +1,6 @@
 package com.tripflow.feature.review
 
+<<<<<<< HEAD
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,10 +18,28 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.tripflow.core.ui.component.RatingStars
 import com.tripflow.core.ui.component.UserBadge
+=======
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+>>>>>>> origin/main
 import com.tripflow.core.ui.theme.Dimens
 import com.tripflow.core.ui.theme.TripFlowColors
 import com.tripflow.core.ui.theme.TripFlowTheme
 
+<<<<<<< HEAD
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReviewListScreen(
@@ -82,10 +101,35 @@ fun ReviewListScreen(
             items(reviews) { review ->
                 ReviewItem(review = review)
             }
+=======
+@Composable
+fun ReviewListScreen(
+    onBackClick: () -> Unit = {}
+) {
+    Scaffold(containerColor = TripFlowColors.Background) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(Dimens.screenPadding),
+            verticalArrangement = Arrangement.spacedBy(Dimens.gapL),
+            horizontalAlignment = Alignment.Start
+        ) {
+            IconButton(onClick = onBackClick) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Indietro")
+            }
+            Text("Le mie recensioni", style = MaterialTheme.typography.headlineMedium)
+            Text(
+                "Qui vedrai le recensioni che hai scritto.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = TripFlowColors.TextSecondary
+            )
+>>>>>>> origin/main
         }
     }
 }
 
+<<<<<<< HEAD
 @Composable
 fun ReviewHeader() {
     Column(
@@ -189,3 +233,10 @@ fun ReviewListScreenPreview() {
         ReviewListScreen()
     }
 }
+=======
+@Preview(showBackground = true)
+@Composable
+private fun ReviewListScreenPreview() {
+    TripFlowTheme { ReviewListScreen() }
+}
+>>>>>>> origin/main

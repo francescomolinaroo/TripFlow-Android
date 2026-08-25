@@ -24,6 +24,15 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -44,6 +53,7 @@ fun TripFlowTextField(
     leading: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
+    var passwordVisible by remember { mutableStateOf(false) }
     val borderColor = when {
         error != null -> TripFlowColors.FieldError
         value.isNotEmpty() -> TripFlowColors.Accent
@@ -69,7 +79,7 @@ fun TripFlowTextField(
             textStyle = MaterialTheme.typography.bodyLarge.copy(color = TripFlowColors.TextPrimary),
             cursorBrush = SolidColor(TripFlowColors.Accent),
             visualTransformation =
-                if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+                if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
             keyboardOptions = KeyboardOptions(
                 keyboardType = if (isPassword) KeyboardType.Password else keyboardType,
             ),
@@ -95,7 +105,17 @@ fun TripFlowTextField(
                         }
                         innerTextField()
                     }
-                    trailing?.invoke()
+                    if (isPassword) {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = if (passwordVisible) "Nascondi password" else "Mostra password",
+                                tint = TripFlowColors.TextSecondary
+                            )
+                        }
+                    } else {
+                        trailing?.invoke()
+                    }
                 }
             },
         )

@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
@@ -15,8 +17,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,17 +51,21 @@ import kotlinx.coroutines.launch
 fun RegisterScreen(
     authRepository: AuthRepository = AuthRepository(),
     onRegisterClick: () -> Unit = {},
-    onLoginClick: () -> Unit = {}
+    onLoginClick: () -> Unit = {},
+    onBackClick: () -> Unit = {}
 ) {
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("") }
+    var dateOfBirth by remember { mutableStateOf("") }
     var selectedRole by remember { mutableStateOf("TRAVELER") }
+    var showOptionalFields by remember { mutableStateOf(false) }
     var submitted by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
-    var serverError by remember { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     val firstNameError = if (submitted && firstName.isBlank()) "Inserisci il nome" else null
@@ -86,15 +99,31 @@ fun RegisterScreen(
         confirmPassword != password
     ).none { it }
 
-    Scaffold(containerColor = TripFlowColors.Background) { innerPadding ->
+    Scaffold(
+        containerColor = TripFlowColors.Background,
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) {
+                Snackbar(
+                    snackbarData = it,
+                    containerColor = TripFlowColors.Error,
+                    contentColor = TripFlowColors.Background
+                )
+            }
+        }
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
+                .imePadding()
+                .navigationBarsPadding()
                 .padding(Dimens.screenPadding),
             verticalArrangement = Arrangement.spacedBy(Dimens.gapM)
         ) {
+            IconButton(onClick = onBackClick) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Indietro")
+            }
             Text(
                 text = "Crea il tuo account",
                 style = MaterialTheme.typography.headlineMedium,
@@ -126,20 +155,24 @@ fun RegisterScreen(
                         modifier = Modifier.weight(1f)
                     )
                 }
-                TripFlowTextField(
-                    value = firstName,
-                    onValueChange = { firstName = it },
-                    label = "Nome",
-                    placeholder = "Il tuo nome",
-                    error = firstNameError
-                )
-                TripFlowTextField(
-                    value = lastName,
-                    onValueChange = { lastName = it },
-                    label = "Cognome",
-                    placeholder = "Il tuo cognome",
-                    error = lastNameError
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(Dimens.gapM)) {
+                    TripFlowTextField(
+                        value = firstName,
+                        onValueChange = { firstName = it },
+                        label = "Nome",
+                        placeholder = "Il tuo nome",
+                        error = firstNameError,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TripFlowTextField(
+                        value = lastName,
+                        onValueChange = { lastName = it },
+                        label = "Cognome",
+                        placeholder = "Il tuo cognome",
+                        error = lastNameError,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
                 TripFlowTextField(
                     value = email,
                     onValueChange = { email = it },
@@ -169,6 +202,36 @@ fun RegisterScreen(
                 )
             }
 
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showOptionalFields = !showOptionalFields },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Dati facoltativi", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    if (showOptionalFields) "Nascondi" else "Data di nascita, telefono",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TripFlowColors.TextSecondary
+                )
+            }
+            if (showOptionalFields) {
+                TripFlowTextField(
+                    value = dateOfBirth,
+                    onValueChange = { dateOfBirth = it },
+                    label = "Data di nascita",
+                    placeholder = "gg/mm/aaaa"
+                )
+                TripFlowTextField(
+                    value = phoneNumber,
+                    onValueChange = { phoneNumber = it },
+                    label = "Telefono",
+                    placeholder = "+39 000 000 0000",
+                    keyboardType = KeyboardType.Phone
+                )
+            }
+
             Spacer(modifier = Modifier.height(Dimens.gapS))
 
             PrimaryButton(
@@ -176,39 +239,37 @@ fun RegisterScreen(
                 onClick = {
                     submitted = true
                     if (formIsValid) {
-                        serverError = null
                         isLoading = true
                         scope.launch {
-                            val request = RegisterRequest(
-                                firstName = firstName,
-                                lastName = lastName,
-                                email = email,
-                                password = password,
-                                role = selectedRole
-                            )
-                            val result = authRepository.register(request)
-                            isLoading = false
-                            result.onSuccess { onRegisterClick() }
-                            result.onFailure { exception ->
-                                serverError = exception.message ?: "Registrazione non riuscita"
+                            try {
+                                val request = RegisterRequest(
+                                    firstName = firstName,
+                                    lastName = lastName,
+                                    email = email,
+                                    password = password,
+                                    role = selectedRole
+                                )
+                                val result = authRepository.register(request)
+                                result.onSuccess { onRegisterClick() }
+                                result.onFailure {
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("Registrazione non riuscita. Controlla i dati inseriti.")
+                                    }
+                                }
+                            } finally {
+                                isLoading = false
                             }
                         }
                     }
                 },
                 enabled = !isLoading
             )
-            if (serverError != null) {
-                Text(
-                    text = serverError.orEmpty(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TripFlowColors.Error
-                )
-            }
             SecondaryButton(
                 text = "Hai già un account? Accedi",
                 onClick = onLoginClick,
                 enabled = !isLoading
             )
+            Spacer(modifier = Modifier.height(Dimens.gapXL))
         }
     }
 }

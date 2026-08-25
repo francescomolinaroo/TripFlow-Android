@@ -25,6 +25,7 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.core.ktx)
     implementation(libs.material)
+    implementation(libs.retrofit)
     implementation(project(":core:core-model"))
     implementation(project(":core:core-network"))
     testImplementation(libs.junit)

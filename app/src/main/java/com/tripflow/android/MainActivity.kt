@@ -2,8 +2,10 @@ package com.tripflow.android
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.*
@@ -12,9 +14,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.tripflow.core.auth.AuthRepository
+import com.tripflow.core.network.auth.UserResponse
 import com.tripflow.core.ui.theme.TripFlowTheme
 import com.tripflow.feature.booking.ui.BookingListScreen
 import com.tripflow.feature.booking.ui.BookingScreen
+import com.tripflow.feature.auth.EditProfileScreen
 import com.tripflow.feature.auth.LoginScreen
 import com.tripflow.feature.auth.RegisterScreen
 import com.tripflow.feature.auth.UserDashboardScreen
@@ -26,12 +31,34 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val authRepository = AuthRepository(this)
         setContent {
             TripFlowTheme {
-                var currentScreen by remember { mutableStateOf("menu") }
+                var currentScreen by remember { mutableStateOf("checking_session") }
+                var editingUser by remember { mutableStateOf<UserResponse?>(null) }
+
+                LaunchedEffect(Unit) {
+                    currentScreen = if (authRepository.checkSession().isSuccess) {
+                        "dashboard"
+                    } else {
+                        "login"
+                    }
+                }
+
+                BackHandler(enabled = currentScreen != "menu") {
+                    currentScreen = when (currentScreen) {
+                        "booking_form", "booking_list", "login", "register" -> "menu"
+                        "dashboard" -> "menu"
+                        "edit_profile", "review_list" -> "dashboard"
+                        else -> "menu"
+                    }
+                }
 
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     when (currentScreen) {
+                        "checking_session" -> Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        }
                         "menu" -> MenuScreen(onNavigate = { currentScreen = it })
                         "booking_form" -> BookingScreen(onBack = { currentScreen = "menu" })
                         "booking_list" -> BookingListScreen(
@@ -40,19 +67,38 @@ class MainActivity : ComponentActivity() {
                         )
                         "itinerary_list" -> MyItinerariesScreen(onCreateNewClick = { /* TODO */ })
                         "login" -> LoginScreen(
+                            authRepository = authRepository,
                             onLoginClick = { currentScreen = "dashboard" },
                             onRegisterClick = { currentScreen = "register" },
                             onContinueWithoutLogin = { currentScreen = "menu" }
                         )
                         "register" -> RegisterScreen(
                             onRegisterClick = { currentScreen = "login" },
-                            onLoginClick = { currentScreen = "login" }
+                            onLoginClick = { currentScreen = "login" },
+                            onBackClick = { currentScreen = "login" }
                         )
                         "dashboard" -> UserDashboardScreen(
+                            authRepository = authRepository,
                             onLogoutClick = { currentScreen = "login" },
-                            onBookingsClick = { currentScreen = "booking_list" }
+                            onSessionExpired = { currentScreen = "login" },
+                            onEditProfileClick = { user ->
+                                editingUser = user
+                                currentScreen = "edit_profile"
+                            },
+                            onBookingsClick = { currentScreen = "booking_list" },
+                            onReviewsClick = { currentScreen = "review_list" }
                         )
-                        "review_list" -> ReviewListScreen(onBack = { currentScreen = "menu" })
+                        "edit_profile" -> editingUser?.let { user ->
+                            EditProfileScreen(
+                                user = user,
+                                authRepository = authRepository,
+                                onBackClick = { currentScreen = "dashboard" },
+                                onSaved = { currentScreen = "dashboard" }
+                            )
+                        }
+                        "review_list" -> ReviewListScreen(
+                            onBackClick = { currentScreen = "dashboard" }
+                        )
                         "write_review" -> WriteReviewScreen(onBack = { currentScreen = "menu" })
                     }
                 }
