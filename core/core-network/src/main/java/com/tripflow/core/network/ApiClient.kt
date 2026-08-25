@@ -1,7 +1,6 @@
 package com.tripflow.core.network
 
 import com.tripflow.core.network.auth.AuthApi
-import com.tripflow.feature.itinerary.api.ItineraryApi
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
@@ -16,7 +15,4 @@ object ApiClient {
     }
 
     val authApi: AuthApi by lazy { retrofit.create(AuthApi::class.java) }
-    val itineraryApi: ItineraryApi by lazy { retrofit.create(ItineraryApi::class.java) }
-
-    fun createItineraryApi(): ItineraryApi = itineraryApi
 }

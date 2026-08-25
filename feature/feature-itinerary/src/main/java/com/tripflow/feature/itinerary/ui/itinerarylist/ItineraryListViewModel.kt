@@ -9,11 +9,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tripflow.core.model.UiState
 import com.tripflow.feature.itinerary.model.ItinerarySummary
+import com.tripflow.feature.itinerary.repository.FakeItineraryRepository
 import com.tripflow.feature.itinerary.repository.ItineraryRepository
 import kotlinx.coroutines.launch
 
 class ItineraryListViewModel(
-    private val repository: ItineraryRepository
+    private val repository: ItineraryRepository = FakeItineraryRepository()
 ) : ViewModel() {
 
     var uiState by mutableStateOf<UiState<List<ItinerarySummary>>>(UiState.Loading)

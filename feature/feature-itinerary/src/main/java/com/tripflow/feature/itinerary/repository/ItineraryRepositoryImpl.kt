@@ -1,8 +1,9 @@
 package com.tripflow.feature.itinerary.repository
 
 import com.tripflow.core.model.UiState
-import com.tripflow.core.network.ApiClient
+import com.tripflow.feature.itinerary.api.CreateItineraryRequest
 import com.tripflow.feature.itinerary.api.ItineraryApi
+import com.tripflow.feature.itinerary.api.VisibilityRequest
 import com.tripflow.feature.itinerary.model.CatalogItem
 import com.tripflow.feature.itinerary.model.CatalogSearchRequest
 import com.tripflow.feature.itinerary.model.CatalogSearchResponse
@@ -13,11 +14,19 @@ import com.tripflow.feature.itinerary.model.StageDetail
 import com.tripflow.feature.itinerary.model.UpdateStageRequest
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import java.util.UUID
 
 class ItineraryRepositoryImpl : ItineraryRepository {
 
-    private val api: ItineraryApi = ApiClient.createItineraryApi()
+    private val api: ItineraryApi by lazy {
+        Retrofit.Builder()
+            .baseUrl("http://10.0.2.2:8080/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ItineraryApi::class.java)
+    }
 
     override suspend fun getMyItineraries(): UiState<List<ItinerarySummary>> = withContext(ioDispatcher) {
         try {
@@ -45,7 +54,7 @@ class ItineraryRepositoryImpl : ItineraryRepository {
         isPublic: Boolean
     ): UiState<ItineraryDetail> = withContext(ioDispatcher) {
         try {
-            val request = ItineraryApi.CreateItineraryRequest(title, description, startDate, endDate, isPublic)
+            val request = CreateItineraryRequest(title, description, startDate, endDate, isPublic)
             val response = api.createItinerary(request)
             UiState.Success(response)
         } catch (e: Exception) {
@@ -64,7 +73,7 @@ class ItineraryRepositoryImpl : ItineraryRepository {
 
     override suspend fun updateVisibility(id: UUID, isPublic: Boolean): UiState<ItineraryDetail> = withContext(ioDispatcher) {
         try {
-            val request = ItineraryApi.VisibilityRequest(isPublic)
+            val request = VisibilityRequest(isPublic)
             val response = api.updateVisibility(id, request)
             UiState.Success(response)
         } catch (e: Exception) {
@@ -138,7 +147,8 @@ class ItineraryRepositoryImpl : ItineraryRepository {
                     409 -> "Conflitto: la risorsa esiste già"
                     else -> "Errore del server ($code)"
                 }
-                UiState.Error(message, retryable = code !in setOf(401, 403, 404, 409))
+                val nonRetryableCodes = setOf(401, 403, 404, 409)
+                UiState.Error(message, retryable = !nonRetryableCodes.contains(code))
             }
             else -> UiState.Error(e.message ?: "Errore di rete", retryable = true)
         }

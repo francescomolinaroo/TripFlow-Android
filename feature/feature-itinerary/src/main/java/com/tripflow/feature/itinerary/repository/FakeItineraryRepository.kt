@@ -9,8 +9,11 @@ import com.tripflow.feature.itinerary.model.ItineraryDetail
 import com.tripflow.feature.itinerary.model.ItinerarySummary
 import com.tripflow.feature.itinerary.model.StageDetail
 import com.tripflow.feature.itinerary.model.StagePreview
+import com.tripflow.feature.itinerary.model.StageSource
 import com.tripflow.feature.itinerary.model.UpdateStageRequest
+import kotlin.math.min
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 class FakeItineraryRepository : ItineraryRepository {
@@ -122,7 +125,7 @@ class FakeItineraryRepository : ItineraryRepository {
         CatalogItem(
             id = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
             title = "Escursione guidata Etna",
-            description = "Trekking sul vulcano attivo più alto d'Europa con guida alpina certificata",
+            description = "Trekking sul vulcano attivo piu alto d'Europa con guida alpina certificata",
             location = "Catania, Sicilia",
             category = "NATURA",
             durationMinutes = 300,
@@ -152,7 +155,7 @@ class FakeItineraryRepository : ItineraryRepository {
         CatalogItem(
             id = UUID.fromString("dddddddd-dddd-dddd-dddd-dddddddddddd"),
             title = "Alpe di Siusi - Escursione guidata",
-            description = "Passeggiata sull'altopiano più grande d'Europa con vista Dolomiti",
+            description = "Passeggiata sull'altopiano piu grande d'Europa con vista Dolomiti",
             location = "Ortisei, Trentino-Alto Adige",
             category = "NATURA",
             durationMinutes = 270,
@@ -188,9 +191,9 @@ class FakeItineraryRepository : ItineraryRepository {
     override suspend fun getItineraryDetail(id: UUID): UiState<ItineraryDetail> {
         val summary = mockItineraries.find { it.id == id }
         if (summary == null) return UiState.Error("Itinerario non trovato")
-        
+
         val stages = generateMockStages(summary)
-        
+
         return UiState.Success(ItineraryDetail(
             id = summary.id,
             title = summary.title,
@@ -225,7 +228,7 @@ class FakeItineraryRepository : ItineraryRepository {
             updatedAt = java.time.Instant.now().toString()
         )
         mockItineraries.add(summary)
-        
+
         return UiState.Success(ItineraryDetail(
             id = newId,
             title = title,
@@ -248,35 +251,45 @@ class FakeItineraryRepository : ItineraryRepository {
     override suspend fun updateVisibility(id: UUID, isPublic: Boolean): UiState<ItineraryDetail> {
         val index = mockItineraries.indexOfFirst { it.id == id }
         if (index == -1) return UiState.Error("Itinerario non trovato")
-        
+
         val old = mockItineraries[index]
         val updated = old.copy(isPublic = isPublic, updatedAt = java.time.Instant.now().toString())
         mockItineraries[index] = updated
-        
+
         return getItineraryDetail(id)
     }
 
     override suspend fun addStage(itineraryId: UUID, request: CreateStageRequest): UiState<StageDetail> {
+        val source = request.source
+        val title = when (source) {
+            is StageSource.Custom -> source.title
+            is StageSource.FromCatalog -> "Da Catalogo"
+            else -> throw IllegalArgumentException("Unknown StageSource type: ${source::class.simpleName}")
+        }
+        val description = when (source) {
+            is StageSource.Custom -> source.description
+            is StageSource.FromCatalog -> null
+            else -> throw IllegalArgumentException("Unknown StageSource type: ${source::class.simpleName}")
+        }
+        val location = when (source) {
+            is StageSource.Custom -> source.location
+            is StageSource.FromCatalog -> null
+            else -> throw IllegalArgumentException("Unknown StageSource type: ${source::class.simpleName}")
+        }
+        val isFromCatalog = source is StageSource.FromCatalog
+        val catalogItemId = (source as? StageSource.FromCatalog)?.catalogItemId
+
         val newStage = StageDetail(
             id = UUID.randomUUID(),
             dayNumber = request.dayNumber,
             date = request.date,
             startTime = request.startTime,
             endTime = request.endTime,
-            title = when (request.source) {
-                is CreateStageRequest.StageSource.Custom -> request.source.title
-                is CreateStageRequest.StageSource.FromCatalog -> "Da Catalogo"
-            },
-            description = when (request.source) {
-                is CreateStageRequest.StageSource.Custom -> request.source.description
-                is CreateStageRequest.StageSource.FromCatalog -> null
-            },
-            location = when (request.source) {
-                is CreateStageRequest.StageSource.Custom -> request.source.location
-                is CreateStageRequest.StageSource.FromCatalog -> null
-            },
-            isFromCatalog = request.source is CreateStageRequest.StageSource.FromCatalog,
-            catalogItemId = (request.source as? CreateStageRequest.StageSource.FromCatalog)?.catalogItemId,
+            title = title,
+            description = description,
+            location = location,
+            isFromCatalog = isFromCatalog,
+            catalogItemId = catalogItemId,
             notes = request.notes,
             orderIndex = 0
         )
@@ -310,11 +323,11 @@ class FakeItineraryRepository : ItineraryRepository {
 
     override suspend fun searchCatalog(request: CatalogSearchRequest): UiState<CatalogSearchResponse> {
         var filtered = mockCatalog
-        
+
         if (request.query?.isNotBlank() == true) {
-            val q = request.query!.lowercase()
-            filtered = filtered.filter { 
-                it.title.lowercase().contains(q) || 
+            val q = request.query!!.lowercase()
+            filtered = filtered.filter {
+                it.title.lowercase().contains(q) ||
                 it.description.lowercase().contains(q) ||
                 it.location.lowercase().contains(q)
             }
@@ -323,15 +336,15 @@ class FakeItineraryRepository : ItineraryRepository {
             filtered = filtered.filter { it.category == request.category }
         }
         if (request.location?.isNotBlank() == true) {
-            filtered = filtered.filter { it.location.lowercase().contains(request.location!.lowercase()) }
+            filtered = filtered.filter { it.location.lowercase().contains(request.location!!.lowercase()) }
         }
-        
+
         val page = request.page
         val size = request.size
         val start = page * size
         val end = min(start + size, filtered.size)
         val paged = if (start < filtered.size) filtered.subList(start, end) else emptyList()
-        
+
         return UiState.Success(CatalogSearchResponse(
             content = paged,
             totalElements = filtered.size.toLong(),
@@ -346,9 +359,9 @@ class FakeItineraryRepository : ItineraryRepository {
     }
 
     private fun generateMockStages(summary: ItinerarySummary): List<StageDetail> {
-        val days = summary.startDate.daysUntil(summary.endDate.plusDays(1))
-        return (1..days).map { day ->
-            val date = summary.startDate.plusDays(day - 1)
+        val days = summary.startDate.until(summary.endDate.plusDays(1), ChronoUnit.DAYS).toInt()
+        return (1..days).flatMap { day ->
+            val date = summary.startDate.plusDays((day - 1).toLong())
             val stageCount = (2..3).random()
             (1..stageCount).map { stageIndex ->
                 StageDetail(
@@ -374,6 +387,6 @@ class FakeItineraryRepository : ItineraryRepository {
                     orderIndex = stageIndex - 1
                 )
             }
-        }.flatten()
+        }
     }
 }

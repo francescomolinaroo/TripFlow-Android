@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -19,23 +19,23 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material3.Card
-import androidx.compose.material3.Icon
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.tripflow.core.ui.component.Status
-import com.tripflow.core.ui.component.StatusChip
 import com.tripflow.core.ui.theme.Dimens
 import com.tripflow.core.ui.theme.TripFlowColors
 import com.tripflow.core.ui.theme.TripFlowTheme
 import com.tripflow.feature.itinerary.model.ItinerarySummary
+import com.tripflow.feature.itinerary.model.StagePreview
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
@@ -48,18 +48,12 @@ fun ItineraryCard(
     modifier: Modifier = Modifier
 ) {
     val dateRange = buildDateRange(itinerary.startDate, itinerary.endDate)
-    val locale = Locale.getDefault()
     val cardModifier = modifier
         .fillMaxWidth()
-        .clip(RoundedCornerShape(Dimens.radiusCard))
         .background(TripFlowColors.Surface)
         .border(1.dp, TripFlowColors.Border, RoundedCornerShape(Dimens.radiusCard))
         .clickable(onClick = onClick)
         .padding(Dimens.gapM)
-        .combinedClickable(
-            onClick = onClick,
-            onLongClick = onLongClick
-        )
 
     Card(
         modifier = cardModifier,
@@ -107,7 +101,7 @@ fun ItineraryCard(
 
             // Preview stages (prime 2)
             if (itinerary.previewStages.isNotEmpty()) {
-                HorizontalDivider(color = TripFlowColors.Divider)
+                Divider(color = TripFlowColors.Divider)
                 Column(verticalArrangement = Arrangement.spacedBy(Dimens.gapS)) {
                     itinerary.previewStages.take(2).forEach { preview ->
                         PreviewStageRow(preview = preview)
@@ -128,11 +122,9 @@ fun ItineraryCard(
 
 @Composable
 private fun VisibilityChip(isPublic: Boolean) {
-    val (icon, label, color) = if (isPublic) {
-        Icons.Default.Public to "Pubblico" to TripFlowColors.Accent
-    } else {
-        Icons.Default.Lock to "Privato" to TripFlowColors.TextSecondary
-    }
+    val icon = if (isPublic) Icons.Default.Public else Icons.Default.Lock
+    val label = if (isPublic) "Pubblico" else "Privato"
+    val color = if (isPublic) TripFlowColors.Accent else TripFlowColors.TextSecondary
     Box(
         modifier = Modifier
             .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -147,7 +139,7 @@ private fun VisibilityChip(isPublic: Boolean) {
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(12.dp))
+            androidx.compose.material3.Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(12.dp))
             Text(
                 text = label,
                 style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
@@ -159,12 +151,12 @@ private fun VisibilityChip(isPublic: Boolean) {
 }
 
 @Composable
-private fun IconWithText(icon: androidx.compose.material.icons.filled.Icon, text: String, color: Color) {
+private fun IconWithText(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, color: Color) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
+        androidx.compose.material3.Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
         Text(
             text = text,
             style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
@@ -174,7 +166,7 @@ private fun IconWithText(icon: androidx.compose.material.icons.filled.Icon, text
 }
 
 @Composable
-private fun PreviewStageRow(preview: ItinerarySummary.StagePreview) {
+private fun PreviewStageRow(preview: StagePreview) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -225,19 +217,36 @@ private fun buildDateRange(startDate: java.time.LocalDate, endDate: java.time.Lo
 }
 
 @Composable
-fun ItineraryListScreenPreview() {
+fun ItineraryCardPreview() {
     TripFlowTheme {
-        val fakeRepo = com.tripflow.feature.itinerary.repository.FakeItineraryRepository()
-        val itineraries = fakeRepo.getMyItineraries().getOrNull() ?: emptyList()
-        
-        androidx.compose.foundation.lazy.LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(Dimens.screenPadding),
-            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(Dimens.gapM)
-        ) {
-            androidx.compose.foundation.lazy.items(itineraries) { itinerary ->
-                ItineraryCard(itinerary = itinerary, onClick = {})
-            }
-        }
+        val mockItinerary = ItinerarySummary(
+            id = java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"),
+            title = "Costa Amalfitana",
+            startDate = java.time.LocalDate.of(2026, 9, 14),
+            endDate = java.time.LocalDate.of(2026, 9, 18),
+            isPublic = true,
+            stagesCount = 12,
+            previewStages = listOf(
+                StagePreview(
+                    id = java.util.UUID.randomUUID(),
+                    dayNumber = 1,
+                    title = "Arrivo ad Amalfi e check-in",
+                    startTime = "14:00",
+                    endTime = "16:00",
+                    isFromCatalog = false
+                ),
+                StagePreview(
+                    id = java.util.UUID.randomUUID(),
+                    dayNumber = 1,
+                    title = "Passeggiata sul lungomare",
+                    startTime = "17:00",
+                    endTime = "19:00",
+                    isFromCatalog = true
+                )
+            ),
+            createdAt = "2026-01-15T10:00:00Z",
+            updatedAt = "2026-01-15T10:00:00Z"
+        )
+        ItineraryCard(itinerary = mockItinerary, onClick = {})
     }
 }
