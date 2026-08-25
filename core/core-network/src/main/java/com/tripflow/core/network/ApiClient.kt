@@ -15,9 +15,8 @@ object ApiClient {
             .build()
     }
 
-<<<<<<< HEAD
     val authApi: AuthApi by lazy { retrofit.create(AuthApi::class.java) }
-=======
+
     val keycloakApi: KeycloakApi by lazy {
         Retrofit.Builder()
             .baseUrl("http://10.0.2.2:9090/")
@@ -25,5 +24,4 @@ object ApiClient {
             .build()
             .create(KeycloakApi::class.java)
     }
->>>>>>> origin/main
 }

@@ -24,8 +24,8 @@ import com.tripflow.feature.auth.LoginScreen
 import com.tripflow.feature.auth.RegisterScreen
 import com.tripflow.feature.auth.UserDashboardScreen
 import com.tripflow.feature.itinerary.ui.myitineraries.MyItinerariesScreen
-import com.tripflow.feature.review.ReviewListScreen
-import com.tripflow.feature.review.WriteReviewScreen
+import com.tripflow.feature.review.ui.ReviewListScreen
+import com.tripflow.feature.review.ui.WriteReviewScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

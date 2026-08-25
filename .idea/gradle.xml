@@ -18,6 +18,7 @@
             <option value="$PROJECT_DIR$/feature" />
             <option value="$PROJECT_DIR$/feature/feature-auth" />
             <option value="$PROJECT_DIR$/feature/feature-booking" />
+            <option value="$PROJECT_DIR$/feature/feature-itinerary" />
             <option value="$PROJECT_DIR$/feature/feature-review" />
           </set>
         </option>
