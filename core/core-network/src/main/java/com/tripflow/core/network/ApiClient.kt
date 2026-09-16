@@ -2,6 +2,7 @@ package com.tripflow.core.network
 
 import com.tripflow.core.network.auth.AuthApi
 import com.tripflow.core.network.auth.KeycloakApi
+import com.tripflow.core.network.catalog.CatalogApi
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
@@ -23,5 +24,13 @@ object ApiClient {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(KeycloakApi::class.java)
+    }
+
+    val catalogApi: CatalogApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(CatalogApi::class.java)
     }
 }
