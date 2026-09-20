@@ -26,7 +26,7 @@ import com.tripflow.feature.auth.UserDashboardScreen
 import com.tripflow.feature.itinerary.ui.myitineraries.MyItinerariesScreen
 import com.tripflow.feature.review.ui.ReviewListScreen
 import com.tripflow.feature.review.ui.WriteReviewScreen
-
+import com.tripflow.feature.catalog.presentation.discover.DiscoverScreen
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
 
                 BackHandler(enabled = currentScreen != "menu") {
                     currentScreen = when (currentScreen) {
-                        "booking_form", "booking_list", "login", "register" -> "menu"
+                        "booking_form", "booking_list", "login", "register", "discover" -> "menu"
                         "dashboard" -> "menu"
                         "edit_profile", "review_list" -> "dashboard"
                         else -> "menu"
@@ -71,6 +71,14 @@ class MainActivity : ComponentActivity() {
                             onLoginClick = { currentScreen = "dashboard" },
                             onRegisterClick = { currentScreen = "register" },
                             onContinueWithoutLogin = { currentScreen = "menu" }
+                        )
+                        "discover" -> DiscoverScreen(
+                            onTripClick = { tripId ->
+                                currentScreen = "menu"
+                            },
+                            onProfileClick = {
+                                currentScreen = "menu"
+                            }
                         )
                         "register" -> RegisterScreen(
                             onRegisterClick = { currentScreen = "login" },
@@ -140,6 +148,9 @@ fun MenuScreen(onNavigate: (String) -> Unit) { //menu temporaneo per provare le 
             }
             Button(onClick = { onNavigate("itinerary_list") }, modifier = Modifier.fillMaxWidth()) {
                 Text("I miei Itinerari")
+            }
+            Button(onClick = { onNavigate("discover") }, modifier = Modifier.fillMaxWidth()) {
+                Text("Scopri (catalogo viaggi)")
             }
         }
     }

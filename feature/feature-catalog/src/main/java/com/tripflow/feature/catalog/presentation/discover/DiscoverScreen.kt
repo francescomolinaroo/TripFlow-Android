@@ -35,7 +35,7 @@ import com.tripflow.feature.catalog.data.repository.CatalogRepositoryImpl
 import java.math.BigDecimal
 import java.time.LocalDate
 
-// 1. Factory per istanziare correttamente il ViewModel senza Hilt/Koin
+
 class DiscoverViewModelFactory : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -49,7 +49,7 @@ fun DiscoverScreen(
     onTripClick: (String) -> Unit,
     onProfileClick: () -> Unit
 ) {
-    // Osservazione reattiva dello stato
+
     val uiState by viewModel.uiState.collectAsState()
     val filters by viewModel.filters.collectAsState()
 
@@ -58,7 +58,7 @@ fun DiscoverScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // 2. Cast sicuro per ovviare al problema della Type Erasure
+
         val tripsCount = (uiState as? UiState.Success<List<TripResponseDTO>>)?.data?.size ?: 0
 
         DiscoverHeader(
@@ -66,7 +66,7 @@ fun DiscoverScreen(
             onProfileClick = onProfileClick
         )
 
-        // Barra di Ricerca e Filtri
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -74,11 +74,11 @@ fun DiscoverScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Dimens.gapM)
         ) {
-            // 3. TripFlowTextField con tutti i parametri obbligatori
+
             TripFlowTextField(
                 value = filters.query,
                 onValueChange = viewModel::updateQuery,
-                label = "", // Parametro obbligatorio in core-ui
+                label = "",
                 placeholder = "Dove vuoi andare?",
                 error = null,
                 enabled = true,
@@ -124,7 +124,6 @@ fun DiscoverScreen(
 
         Spacer(modifier = Modifier.height(Dimens.gapM))
 
-        // 4. Specifichiamo esplicitamente il tipo generico <List<TripResponseDTO>> per il compiler
         StateHost<List<TripResponseDTO>>(
             state = uiState,
             onRetry = viewModel::loadTrips,
@@ -207,7 +206,7 @@ private fun FilterRow(
             InfoChip(
                 text = "Tutti",
                 highlighted = isAllSelected,
-                leading = {}, // Aggiunto parametro mancante
+                leading = {},
                 modifier = Modifier.clickable { onClearFilters() }
             )
         }
@@ -215,7 +214,7 @@ private fun FilterRow(
             InfoChip(
                 text = "Posti liberi",
                 highlighted = filters.showOnlyAvailable,
-                leading = {}, // Aggiunto parametro mancante
+                leading = {},
                 modifier = Modifier.clickable { onToggleAvailable() }
             )
         }
@@ -223,7 +222,7 @@ private fun FilterRow(
             InfoChip(
                 text = "Sotto € 500",
                 highlighted = filters.maxPrice == 500.0,
-                leading = {}, // Aggiunto parametro mancante
+                leading = {},
                 modifier = Modifier.clickable { onTogglePrice() }
             )
         }
@@ -231,7 +230,7 @@ private fun FilterRow(
             InfoChip(
                 text = "Settembre",
                 highlighted = filters.targetMonth == 9,
-                leading = {}, // Aggiunto parametro mancante
+                leading = {},
                 modifier = Modifier.clickable { onToggleMonth() }
             )
         }
