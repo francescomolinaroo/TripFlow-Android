@@ -10,4 +10,6 @@ interface CatalogRepository {
         startDate: String? = null,
         endDate: String? = null
     ): Result<List<TripResponseDTO>>
+
+    suspend fun getTripById(id: String): Result<TripResponseDTO>
 }

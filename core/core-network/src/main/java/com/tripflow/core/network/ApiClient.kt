@@ -3,6 +3,7 @@ package com.tripflow.core.network
 import com.tripflow.core.network.auth.AuthApi
 import com.tripflow.core.network.auth.KeycloakApi
 import com.tripflow.core.network.catalog.CatalogApi
+import com.tripflow.core.network.review.ReviewApi
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
@@ -32,5 +33,13 @@ object ApiClient {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(CatalogApi::class.java)
+    }
+
+    val reviewApi: ReviewApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ReviewApi::class.java)
     }
 }

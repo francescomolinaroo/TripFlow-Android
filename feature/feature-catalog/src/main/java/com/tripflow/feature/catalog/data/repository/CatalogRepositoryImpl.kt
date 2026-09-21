@@ -25,4 +25,13 @@ class CatalogRepositoryImpl : CatalogRepository {
             Result.failure(exception)
         }
     }
+    override suspend fun getTripById(id: String): Result<TripResponseDTO> {
+        return try {
+            val response = ApiClient.catalogApi.getTripById(id)
+            Result.success(response)
+        } catch (exception: Exception) {
+            Result.failure(exception)
+        }
+    }
+
 }
