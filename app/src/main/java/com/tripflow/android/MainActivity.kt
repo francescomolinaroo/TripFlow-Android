@@ -23,6 +23,7 @@ import com.tripflow.feature.auth.EditProfileScreen
 import com.tripflow.feature.auth.LoginScreen
 import com.tripflow.feature.auth.RegisterScreen
 import com.tripflow.feature.auth.UserDashboardScreen
+import com.tripflow.feature.catalog.presentation.detail.TripDetailScreen
 import com.tripflow.feature.itinerary.ui.myitineraries.MyItinerariesScreen
 import com.tripflow.feature.review.ui.ReviewListScreen
 import com.tripflow.feature.review.ui.WriteReviewScreen
@@ -37,6 +38,8 @@ class MainActivity : ComponentActivity() {
                 var currentScreen by remember { mutableStateOf("checking_session") }
                 var editingUser by remember { mutableStateOf<UserResponse?>(null) }
 
+                var selectedTripId by remember {mutableStateOf<String?>(null) }
+
                 LaunchedEffect(Unit) {
                     currentScreen = if (authRepository.checkSession().isSuccess) {
                         "dashboard"
@@ -50,6 +53,7 @@ class MainActivity : ComponentActivity() {
                         "booking_form", "booking_list", "login", "register", "discover" -> "menu"
                         "dashboard" -> "menu"
                         "edit_profile", "review_list" -> "dashboard"
+                        "trip_detail" -> "discover"
                         else -> "menu"
                     }
                 }
@@ -74,12 +78,26 @@ class MainActivity : ComponentActivity() {
                         )
                         "discover" -> DiscoverScreen(
                             onTripClick = { tripId ->
-                                currentScreen = "menu"
+                                selectedTripId = tripId
+                                currentScreen = "trip_detail"
                             },
-                            onProfileClick = {
-                                currentScreen = "menu"
-                            }
+                            onProfileClick = { currentScreen = "dashboard" }
                         )
+                        "trip_detail" -> {
+                            selectedTripId?.let { id ->
+                                TripDetailScreen(
+                                    tripId = id,
+                                    onBackClick = { currentScreen = "discover" },
+                                    onBookClick = { tripIdToBook ->
+                                        // passare id al modulo booking
+                                        // per ora navighiamo al form generico
+                                        currentScreen = "booking_form"
+                                    }
+                                )
+                            } ?: run {
+                                currentScreen = "discover"
+                            }
+                        }
                         "register" -> RegisterScreen(
                             onRegisterClick = { currentScreen = "login" },
                             onLoginClick = { currentScreen = "login" },
