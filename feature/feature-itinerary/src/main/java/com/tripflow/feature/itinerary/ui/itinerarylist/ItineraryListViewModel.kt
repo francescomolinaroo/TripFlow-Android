@@ -1,34 +1,62 @@
 package com.tripflow.feature.itinerary.ui.itinerarylist
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tripflow.core.model.UiState
 import com.tripflow.feature.itinerary.model.ItinerarySummary
-import com.tripflow.feature.itinerary.repository.FakeItineraryRepository
 import com.tripflow.feature.itinerary.repository.ItineraryRepository
+import com.tripflow.feature.itinerary.ui.viewmodels.ItineraryListState
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+// TODO: Add @HiltViewModel and @Inject when Hilt is configured in the project
+// import dagger.hilt.android.lifecycle.HiltViewModel
+// import javax.inject.Inject
+// @HiltViewModel
 class ItineraryListViewModel(
-    private val repository: ItineraryRepository = FakeItineraryRepository()
+    private val repository: ItineraryRepository
 ) : ViewModel() {
 
-    var uiState by mutableStateOf<UiState<List<ItinerarySummary>>>(UiState.Loading)
-        private set
+    private val _uiState = MutableStateFlow(ItineraryListState.initial)
+    val uiState = _uiState.asStateFlow()
 
-    init { loadItineraries() }
+    init {
+        fetchItineraries()
+    }
 
-    fun loadItineraries() {
+    fun fetchItineraries() {
         viewModelScope.launch {
-            uiState = UiState.Loading
-            uiState = repository.getMyItineraries()
+            _uiState.value = ItineraryListState(isLoading = true)
+            val result = repository.getMyItineraries()
+            _uiState.value = mapResultToState(result)
         }
     }
 
-    fun onItineraryDeleted() { loadItineraries() }
-    fun onItineraryUpdated() { loadItineraries() }
+    fun onItineraryDeleted() {
+        fetchItineraries()
+    }
+
+    fun onItineraryUpdated() {
+        fetchItineraries()
+    }
+
+    private fun mapResultToState(
+        result: com.tripflow.core.model.UiState<List<ItinerarySummary>>
+    ): ItineraryListState = when (result) {
+        is com.tripflow.core.model.UiState.Loading -> ItineraryListState(isLoading = true)
+        is com.tripflow.core.model.UiState.Success -> ItineraryListState(
+            isLoading = false,
+            itineraries = result.data
+        )
+        is com.tripflow.core.model.UiState.Empty -> ItineraryListState(
+            isLoading = false,
+            itineraries = emptyList(),
+            errorMessage = result.message
+        )
+        is com.tripflow.core.model.UiState.Error -> ItineraryListState(
+            isLoading = false,
+            errorMessage = result.message
+        )
+    }
 }

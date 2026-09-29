@@ -141,6 +141,18 @@ private fun ErrorState(
     message: String,
     onRetry: () -> Unit
 ) {
+    val userFriendlyMessage = when {
+        message.contains("401") || message.contains("Sessione scaduta") || message.contains("effettua di nuovo l'accesso") -> 
+            "Sessione scaduta. Devi effettuare di nuovo l'accesso."
+        message.contains("404") || message.contains("Risorsa non trovata") || message.contains("Nessun itinerario trovato") ->
+            "Nessun itinerario trovato."
+        message.contains("403") || message.contains("Non hai i permessi") ->
+            "Non hai i permessi per visualizzare gli itinerari."
+        message.contains("500") || message.contains("Errore del server") || message.contains("Errore interno") ->
+            "Errore del server. Riprova più tardi."
+        else -> message
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -152,7 +164,7 @@ private fun ErrorState(
             verticalArrangement = Arrangement.spacedBy(Dimens.gapM)
         ) {
             Text(
-                text = message,
+                text = userFriendlyMessage,
                 style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
                 color = TripFlowColors.TextPrimary,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
