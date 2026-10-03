@@ -1,7 +1,8 @@
 package com.tripflow.feature.booking.ui
 
+import com.tripflow.core.model.UiState
+
 data class BookingListUiState(
-    val bookings: List<BookingUi> = emptyList(),
-    val selectedTabIndex: Int = 0,
-    val isLoading: Boolean = false
+    val bookings: UiState<List<BookingUi>> = UiState.Loading,
+    val selectedTabIndex: Int = 0
 )

@@ -22,7 +22,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.tripflow.core.model.UiState
 import com.tripflow.core.ui.component.PrimaryButton
+import com.tripflow.core.ui.component.StateHost
 import com.tripflow.core.ui.component.TripFlowTextArea
 import com.tripflow.core.ui.theme.Dimens
 import com.tripflow.core.ui.theme.TripFlowColors
@@ -37,11 +39,19 @@ import com.tripflow.feature.booking.ui.components.TripSummaryHeader
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookingScreen(
+    viaggioId: String? = null,
     onBack: () -> Unit = {},
-    onPaymentClick: () -> Unit = {},
-    viewModel: BookingScreenViewModel = viewModel()
+    onPaymentClick: (String) -> Unit = {},
+    viewModel: BookingScreenViewModel = viewModel(key = viaggioId) { BookingScreenViewModel(viaggioId) }
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(uiState.createdBookingId) {
+        uiState.createdBookingId?.let { id ->
+            onPaymentClick(id)
+            viewModel.onNavigatedToPayment()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -58,107 +68,123 @@ fun BookingScreen(
             )
         },
         bottomBar = {
-            BookingBottomBar(
-                totalPrice = uiState.totalPrice,
-                onPaymentClick = onPaymentClick
-            )
+            if (uiState.trip is UiState.Success) {
+                BookingBottomBar(
+                    totalPrice = uiState.totalPrice,
+                    onPaymentClick = viewModel::onConfirm,
+                    isSubmitting = uiState.isSubmitting,
+                    error = uiState.submitError
+                )
+            }
         },
         containerColor = TripFlowColors.Background
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(Dimens.screenPadding),
-            verticalArrangement = Arrangement.spacedBy(Dimens.gapXL)
-        ) {
-            TripSummaryHeader()
+        StateHost(
+            state = uiState.trip,
+            onRetry = viewModel::loadTrip,
+            modifier = Modifier.padding(innerPadding)
+        ) { trip ->
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(Dimens.screenPadding),
+                verticalArrangement = Arrangement.spacedBy(Dimens.gapXL)
+            ) {
+                TripSummaryHeader(trip)
 
-            Section(title = "PARTECIPANTI") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            "Quante persone?",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = TripFlowColors.TextPrimary
-                        )
-                        Text(
-                            "Massimo 12 posti disponibili",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TripFlowColors.TextSecondary
+                Section(title = "PARTECIPANTI") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                "Quante persone?",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = TripFlowColors.TextPrimary
+                            )
+                            Text(
+                                if (uiState.maxParticipants > 0) "Massimo ${uiState.maxParticipants} posti disponibili" else "Posti esauriti",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TripFlowColors.TextSecondary
+                            )
+                        }
+                        Stepper(
+                            value = uiState.participants,
+                            onValueChange = { viewModel.onParticipantsChange(it) },
+                            minValue = 1,
+                            maxValue = uiState.maxParticipants.coerceAtLeast(1)
                         )
                     }
-                    Stepper(
-                        value = uiState.participants,
-                        onValueChange = { viewModel.onParticipantsChange(it) },
-                        minValue = 1,
-                        maxValue = 12
+                }
+
+                Section(title = "ATTIVITÀ OPZIONALI") {
+                    Column(verticalArrangement = Arrangement.spacedBy(Dimens.gapM)) {
+                        if (uiState.activities.isEmpty()) {
+                            Text(
+                                "Nessuna attività opzionale per questo viaggio",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TripFlowColors.TextSecondary
+                            )
+                        }
+                        uiState.activities.forEach { activity ->
+                            ActivityItem(
+                                activity = activity,
+                                onToggle = {
+                                    viewModel.onToggleActivity(activity.id)
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Section(title = "NOTE PER L'ORGANIZZATORE") {
+                    TripFlowTextArea(
+                        value = uiState.notes,
+                        onValueChange = { viewModel.onNotesChange(it) },
+                        label = "",
+                        placeholder = "Allergie, richieste particolari, orario di arrivo...",
+                        maxChars = 1000
                     )
                 }
-            }
 
-            Section(title = "ATTIVITÀ OPZIONALI") {
-                Column(verticalArrangement = Arrangement.spacedBy(Dimens.gapM)) {
-                    uiState.activities.forEach { activity ->
-                        ActivityItem(
-                            activity = activity,
-                            onToggle = {
-                                viewModel.onToggleActivity(activity.name)
-                            }
-                        )
-                    }
-                }
-            }
+                Spacer(modifier = Modifier.height(Dimens.gapM))
 
-            Section(title = "NOTE PER L'ORGANIZZATORE") {
-                TripFlowTextArea(
-                    value = uiState.notes,
-                    onValueChange = { viewModel.onNotesChange(it) },
-                    label = "",
-                    placeholder = "Allergie, richieste particolari, orario di arrivo...",
-                    maxChars = 1000
-                )
-            }
-
-            Spacer(modifier = Modifier.height(Dimens.gapM))
-
-            Section(title = "RIEPILOGO") {
-                SummaryRow(
-                    "Viaggio € ${uiState.basePricePerPerson} x ${uiState.participants}",
-                    "€ ${uiState.basePricePerPerson * uiState.participants}"
-                )
-                uiState.activities.filter { it.isSelected }.forEach { activity ->
+                Section(title = "RIEPILOGO") {
                     SummaryRow(
-                        "${activity.name} € ${activity.price} x ${uiState.participants}",
-                        "€ ${activity.price * uiState.participants}"
+                        "Viaggio € ${uiState.basePricePerPerson} x ${uiState.participants}",
+                        "€ ${uiState.basePricePerPerson * uiState.participants}"
                     )
+                    uiState.activities.filter { it.isSelected }.forEach { activity ->
+                        SummaryRow(
+                            "${activity.name} € ${activity.price} x ${uiState.participants}",
+                            "€ ${activity.price * uiState.participants}"
+                        )
+                    }
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = Dimens.gapL),
+                        color = TripFlowColors.Border
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "Totale",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "€ ${uiState.totalPrice}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = Dimens.gapL),
-                    color = TripFlowColors.Border
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        "Totale",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        "€ ${uiState.totalPrice}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
 
-            Spacer(modifier = Modifier.height(80.dp))
+                Spacer(modifier = Modifier.height(80.dp))
+            }
         }
     }
 }

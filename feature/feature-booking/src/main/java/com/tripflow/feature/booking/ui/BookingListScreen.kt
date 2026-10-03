@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -24,6 +25,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.tripflow.core.ui.component.StateHost
 import com.tripflow.core.ui.component.Status
 import com.tripflow.core.ui.component.StatusChip
 import com.tripflow.core.ui.theme.Dimens
@@ -35,10 +37,15 @@ import com.tripflow.feature.booking.ui.components.BookingCard
 fun BookingListScreen(
     onBookingClick: (String) -> Unit = {},
     onWriteReviewClick: (String) -> Unit = {},
+    onPayClick: (String) -> Unit = {},
     viewModel: BookingListViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val tabs = listOf("Attive", "Tutte")
+
+    LaunchedEffect(Unit) {
+        viewModel.loadBookings()
+    }
 
     Scaffold(
         topBar = {
@@ -85,20 +92,28 @@ fun BookingListScreen(
         },
         containerColor = TripFlowColors.Background
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .navigationBarsPadding(),
-            contentPadding = PaddingValues(Dimens.screenPadding),
-            verticalArrangement = Arrangement.spacedBy(Dimens.gapXL)
-        ) {
-            items(uiState.bookings) { booking ->
-                BookingCard(
-                    booking = booking,
-                    onClick = { onBookingClick(booking.id) },
-                    onActionClick = { onWriteReviewClick(booking.id)}
-                )
+        StateHost(
+            state = uiState.bookings,
+            onRetry = viewModel::loadBookings,
+            modifier = Modifier.padding(innerPadding),
+            emptyTitle = "Nessuna prenotazione"
+        ) { bookings ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .navigationBarsPadding(),
+                contentPadding = PaddingValues(Dimens.screenPadding),
+                verticalArrangement = Arrangement.spacedBy(Dimens.gapXL)
+            ) {
+                items(bookings) { booking ->
+                    BookingCard(
+                        booking = booking,
+                        onClick = { onBookingClick(booking.id) },
+                        onActionClick = {
+                            if (booking.status == "IN_ATTESA") onPayClick(booking.id) else onWriteReviewClick(booking.id)
+                        }
+                    )
+                }
             }
         }
     }
