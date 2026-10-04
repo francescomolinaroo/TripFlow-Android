@@ -25,11 +25,24 @@ import com.tripflow.feature.review.ui.components.TripSmallHeader
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WriteReviewScreen(
+    prenotazioneId: String? = null,
+    viaggioId: String? = null,
+    tripTitle: String = "Viaggio",
+    tripSubtitle: String? = null,
     onBack: () -> Unit = {},
     onPublish: () -> Unit = {},
-    viewModel: WriteReviewViewModel = viewModel()
+    viewModel: WriteReviewViewModel = viewModel(key = prenotazioneId) {
+        WriteReviewViewModel(prenotazioneId = prenotazioneId, oggettoId = viaggioId)
+    }
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(uiState.isPublished) {
+        if (uiState.isPublished) {
+            onPublish()
+            viewModel.onPublishedHandled()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -54,12 +67,13 @@ fun WriteReviewScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                uiState.error?.let { error ->
+                    Text(error, style = MaterialTheme.typography.bodySmall, color = TripFlowColors.Error)
+                }
                 PrimaryButton(
                     text = if (uiState.isLoading) "Pubblicazione..." else "Pubblica recensione",
                     enabled = !uiState.isLoading,
-                    onClick = {
-                        viewModel.publishReview(onSuccess = onPublish)
-                    }
+                    onClick = viewModel::publishReview
                 )
                 Text(
                     "Puoi recensire una sola volta per prenotazione.",
@@ -78,7 +92,7 @@ fun WriteReviewScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(Dimens.gapXL)
         ) {
-            TripSmallHeader()
+            TripSmallHeader(title = tripTitle, subtitle = tripSubtitle)
 
             Text(
                 "Com'è andata?",

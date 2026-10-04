@@ -26,6 +26,9 @@ fun ReviewItem(review: ReviewUi) {
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Dimens.gapS)
     ) {
+        if (review.subject != null) {
+            Text(review.subject, style = MaterialTheme.typography.labelMedium, color = TripFlowColors.Accent)
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,

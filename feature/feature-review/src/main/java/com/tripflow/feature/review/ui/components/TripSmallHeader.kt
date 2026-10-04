@@ -21,7 +21,7 @@ import com.tripflow.core.ui.theme.Dimens
 import com.tripflow.core.ui.theme.TripFlowColors
 
 @Composable
-fun TripSmallHeader() {
+fun TripSmallHeader(title: String, subtitle: String?) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -41,8 +41,10 @@ fun TripSmallHeader() {
             contentScale = ContentScale.Crop
         )
         Column {
-            Text("Isole Eolie in barca", style = MaterialTheme.typography.titleMedium)
-            Text("Viaggio completato il 7 giu 2026", style = MaterialTheme.typography.bodySmall, color = TripFlowColors.TextSecondary)
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            if (subtitle != null) {
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = TripFlowColors.TextSecondary)
+            }
         }
     }
 }

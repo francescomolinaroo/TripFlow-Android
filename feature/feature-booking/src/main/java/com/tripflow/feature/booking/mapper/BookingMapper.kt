@@ -28,6 +28,7 @@ fun PrenotazioneResponse.toUi(): BookingUi {
     }
     return BookingUi(
         id = id,
+        tripId = viaggioId,
         title = titoloViaggio ?: "Viaggio",
         date = Formatters.dateRange(parseDate(dataInizio), parseDate(dataFine)),
         location = destinazione ?: "—",

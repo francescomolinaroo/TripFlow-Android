@@ -11,7 +11,7 @@ import com.tripflow.feature.review.ui.components.ReviewUi
 import java.time.Duration
 import java.time.LocalDateTime
 
-fun RecensioneResponse.toUi(): ReviewUi {
+fun RecensioneResponse.toUi(conOggetto: Boolean = false): ReviewUi {
     val nome: String
 
     if (autoreNome != null && autoreNome.isNotBlank()) {
@@ -19,17 +19,27 @@ fun RecensioneResponse.toUi(): ReviewUi {
     } else {
         nome = "Viaggiatore"
     }
+
+    val oggetto: String?
+
+    if (conOggetto) {
+        oggetto = oggettoNome
+    } else {
+        oggetto = null
+    }
+
     return ReviewUi(
         name = nome,
         rating = valutazione.toDouble(),
         date = Formatters.date(parseDateTime(createdAt)?.toLocalDate()),
         title = titolo.orEmpty(),
         comment = commento.orEmpty(),
-        isModified = isModified()
+        isModified = isModified(),
+        subject = oggetto
     )
 }
 
-fun List<RecensioneResponse>.toUi(): List<ReviewUi> = map { it.toUi() }
+fun List<RecensioneResponse>.toUi(conOggetto: Boolean = false): List<ReviewUi> = map { it.toUi(conOggetto) }
 
 fun List<RecensioneResponse>.toSummaryUi(): ReviewSummaryUi {
 

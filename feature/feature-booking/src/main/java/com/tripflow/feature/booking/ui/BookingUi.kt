@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 
 data class BookingUi(
     val id: String,
+    val tripId: String,
     val title: String,
     val date: String,
     val location: String,

@@ -36,7 +36,7 @@ import com.tripflow.feature.booking.ui.components.BookingCard
 @Composable
 fun BookingListScreen(
     onBookingClick: (String) -> Unit = {},
-    onWriteReviewClick: (String) -> Unit = {},
+    onWriteReviewClick: (BookingUi) -> Unit = {},
     onPayClick: (String) -> Unit = {},
     viewModel: BookingListViewModel = viewModel()
 ) {
@@ -110,7 +110,7 @@ fun BookingListScreen(
                         booking = booking,
                         onClick = { onBookingClick(booking.id) },
                         onActionClick = {
-                            if (booking.status == "IN_ATTESA") onPayClick(booking.id) else onWriteReviewClick(booking.id)
+                            if (booking.status == "IN_ATTESA") onPayClick(booking.id) else onWriteReviewClick(booking)
                         }
                     )
                 }
