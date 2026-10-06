@@ -1,6 +1,7 @@
-package com.tripflow.feature.itinerary.repository
+﻿package com.tripflow.feature.itinerary.repository
 
 import com.tripflow.core.model.UiState
+import com.tripflow.core.network.ApiClient
 import com.tripflow.feature.itinerary.api.CreateItineraryRequest
 import com.tripflow.feature.itinerary.api.ItineraryApi
 import com.tripflow.feature.itinerary.api.VisibilityRequest
@@ -21,11 +22,7 @@ import java.util.UUID
 class ItineraryRepositoryImpl : ItineraryRepository {
 
     private val api: ItineraryApi by lazy {
-        Retrofit.Builder()
-            .baseUrl("http://10.0.2.2:8080/")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(ItineraryApi::class.java)
+        ApiClient.create(ItineraryApi::class.java)
     }
 
     override suspend fun getMyItineraries(): UiState<List<ItinerarySummary>> = withContext(ioDispatcher) {

@@ -1,6 +1,7 @@
-package com.tripflow.feature.booking.repository
+﻿package com.tripflow.feature.booking.repository
 
 import com.tripflow.core.model.UiState
+import com.tripflow.core.network.ApiClient
 import com.tripflow.feature.booking.api.BookingApi
 import com.tripflow.feature.booking.model.PagamentoIntentResponse
 import com.tripflow.feature.booking.model.PagamentoResponse
@@ -75,10 +76,6 @@ class BookingRepositoryImpl(
     }
 
     private companion object {
-        fun defaultApi(): BookingApi = Retrofit.Builder()
-            .baseUrl("http://10.0.2.2:8080/") //da rivedere
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(BookingApi::class.java)
+        fun defaultApi(): BookingApi = ApiClient.create(BookingApi::class.java)
     }
 }

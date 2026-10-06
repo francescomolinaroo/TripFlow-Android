@@ -125,7 +125,7 @@ class MainActivity : ComponentActivity() {
                                 currentScreen = "discover"
                             }
                         }
-                        "register" -> RegisterScreen(
+                        "register" -> RegisterScreen( authRepository = authRepository,
                             onRegisterClick = { currentScreen = "login" },
                             onLoginClick = { currentScreen = "login" },
                             onBackClick = { currentScreen = "login" }

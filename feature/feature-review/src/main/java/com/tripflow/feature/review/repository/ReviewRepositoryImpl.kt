@@ -1,6 +1,7 @@
-package com.tripflow.feature.review.repository
+﻿package com.tripflow.feature.review.repository
 
 import com.tripflow.core.model.UiState
+import com.tripflow.core.network.ApiClient
 import com.tripflow.feature.review.api.ReviewApi
 import com.tripflow.feature.review.model.RecensioneRequest
 import com.tripflow.feature.review.model.RecensioneResponse
@@ -79,10 +80,6 @@ class ReviewRepositoryImpl(
     }
 
     private companion object {
-        fun defaultApi(): ReviewApi = Retrofit.Builder()
-            .baseUrl("http://10.0.2.2:8080/")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(ReviewApi::class.java)
+        fun defaultApi(): ReviewApi = ApiClient.create(ReviewApi::class.java)
     }
 }
