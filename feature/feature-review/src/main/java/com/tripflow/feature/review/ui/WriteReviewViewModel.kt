@@ -64,6 +64,6 @@ class WriteReviewViewModel(
     }
 
     fun onPublishedHandled() {
-        _uiState.update { it.copy(isPublished = false) }
+        _uiState.value = WriteReviewUiState()
     }
 }

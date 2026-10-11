@@ -11,6 +11,7 @@ data class BookingUi(
     val participants: Int,
     val price: Int,
     val status: String,
+    val reviewed: Boolean = false,
     val action: String? = null,
     val actionIcon: ImageVector? = null
 )

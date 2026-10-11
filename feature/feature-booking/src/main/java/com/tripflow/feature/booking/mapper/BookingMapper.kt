@@ -1,6 +1,7 @@
 package com.tripflow.feature.booking.mapper
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Star
 import com.tripflow.core.network.catalog.dto.ActivityResponseDTO
@@ -20,10 +21,14 @@ import java.math.RoundingMode
 import java.time.LocalDate
 import java.time.LocalDateTime
 
-fun PrenotazioneResponse.toUi(): BookingUi {
+fun PrenotazioneResponse.toUi(recensita: Boolean = false): BookingUi {
     val (action, actionIcon) = when (stato) {
         StatoPrenotazione.IN_ATTESA -> "Completa il pagamento" to Icons.Default.CreditCard
-        StatoPrenotazione.COMPLETATA -> "Scrivi una recensione" to Icons.Default.Star
+        StatoPrenotazione.COMPLETATA -> if (recensita) {
+            "Recensione inviata" to Icons.Default.CheckCircle
+        } else {
+            "Scrivi una recensione" to Icons.Default.Star
+        }
         else -> null to null
     }
     return BookingUi(
@@ -35,12 +40,14 @@ fun PrenotazioneResponse.toUi(): BookingUi {
         participants = numeroPartecipanti,
         price = prezzoTotale.setScale(0, RoundingMode.HALF_UP).toInt(),
         status = stato.name,
+        reviewed = recensita,
         action = action,
         actionIcon = actionIcon
     )
 }
 
-fun List<PrenotazioneResponse>.toUi(): List<BookingUi> = map { it.toUi() }
+fun List<PrenotazioneResponse>.toUi(recensite: Set<String> = emptySet()): List<BookingUi> =
+    map { it.toUi(recensita = it.id in recensite) }
 
 fun PrenotazioneResponse.toDetailUi(): BookingDetailUi {
     val pagamento = infoPagamento

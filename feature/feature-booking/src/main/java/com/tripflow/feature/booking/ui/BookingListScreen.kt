@@ -110,7 +110,13 @@ fun BookingListScreen(
                         booking = booking,
                         onClick = { onBookingClick(booking.id) },
                         onActionClick = {
-                            if (booking.status == "IN_ATTESA") onPayClick(booking.id) else onWriteReviewClick(booking)
+                            if (booking.status == "IN_ATTESA") {
+                                onPayClick(booking.id)
+                            } else if (booking.reviewed) {
+                                onBookingClick(booking.id)
+                            } else {
+                                onWriteReviewClick(booking)
+                            }
                         }
                     )
                 }
