@@ -17,5 +17,7 @@ data class PrenotazioneResponse(
     val secondiAllaScadenza: Long?,
     val note: String?,
     val attivitaSelezionate: List<PrenotazioneAttivitaResponse>?,
-    val infoPagamento: PagamentoResponse?
+    val infoPagamento: PagamentoResponse?,
+    val viaggiatoreNome: String? = null,
+    val dataPrenotazione: String? = null
 )

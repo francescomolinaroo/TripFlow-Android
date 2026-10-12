@@ -138,6 +138,10 @@ class FakeBookingRepository(
         UiState.Success(prenotazioni.filter { it.stato in STATI_ATTIVI })
     }
 
+    override suspend fun prenotazioniRicevute(): UiState<List<PrenotazioneResponse>> = simula {
+        UiState.Success(prenotazioni.toList())
+    }
+
     override suspend fun annullaPrenotazione(id: String): UiState<PrenotazioneResponse> = simula {
         val p = trova(id) ?: return@simula nonTrovata(id)
         if (p.stato !in STATI_ATTIVI) {

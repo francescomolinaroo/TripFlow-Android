@@ -16,6 +16,8 @@ interface BookingRepository {
 
     suspend fun miePrenotazioniAttive(): UiState<List<PrenotazioneResponse>>
 
+    suspend fun prenotazioniRicevute(): UiState<List<PrenotazioneResponse>>
+
     suspend fun annullaPrenotazione(id: String): UiState<PrenotazioneResponse>
 
     suspend fun aggiungiAttivita(prenotazioneId: String, attivitaId: String): UiState<PrenotazioneResponse>

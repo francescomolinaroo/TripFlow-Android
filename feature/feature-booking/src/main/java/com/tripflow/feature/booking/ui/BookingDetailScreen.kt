@@ -52,8 +52,11 @@ import com.tripflow.feature.booking.ui.components.TripSummaryHeader
 @Composable
 fun BookingDetailScreen(
     prenotazioneId: String? = null,
+    vistaOrganizzatore: Boolean = false,
     onBack: () -> Unit = {},
-    viewModel: BookingDetailViewModel = viewModel(key = prenotazioneId) { BookingDetailViewModel(prenotazioneId) }
+    viewModel: BookingDetailViewModel = viewModel(
+        key = if (vistaOrganizzatore) "ricevuta-$prenotazioneId" else prenotazioneId
+    ) { BookingDetailViewModel(prenotazioneId, vistaOrganizzatore) }
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -82,7 +85,12 @@ fun BookingDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Prenotazione", style = MaterialTheme.typography.titleLarge) },
+                title = {
+                    Text(
+                        if (vistaOrganizzatore) "Prenotazione ricevuta" else "Prenotazione",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
@@ -132,6 +140,12 @@ fun BookingDetailScreen(
 
                 uiState.secondsLeft?.let { CountdownBanner(it) }
 
+                booking.travelerName?.let { name ->
+                    Section(title = "VIAGGIATORE") {
+                        Text(name, style = MaterialTheme.typography.bodyMedium, color = TripFlowColors.TextBody)
+                    }
+                }
+
                 Section(title = "ATTIVITÀ") {
                     if (booking.activities.isEmpty()) {
                         Text(
@@ -146,7 +160,7 @@ fun BookingDetailScreen(
                 }
 
                 booking.notes?.let { notes ->
-                    Section(title = "NOTE PER L'ORGANIZZATORE") {
+                    Section(title = if (booking.travelerName != null) "NOTE DEL VIAGGIATORE" else "NOTE PER L'ORGANIZZATORE") {
                         Text(notes, style = MaterialTheme.typography.bodyMedium, color = TripFlowColors.TextBody)
                     }
                 }

@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 
 class BookingDetailViewModel(
     private val prenotazioneId: String?,
+    private val vistaOrganizzatore: Boolean = false,
     private val repository: BookingRepository = BookingRepositoryProvider.repository
 ) : ViewModel() {
 
@@ -108,10 +109,13 @@ class BookingDetailViewModel(
     }
 
     private fun apply(prenotazione: PrenotazioneResponse) {
-        val secondi = prenotazione.secondiAllaScadenza
+        var secondi = prenotazione.secondiAllaScadenza
             ?.takeIf { prenotazione.stato == StatoPrenotazione.IN_ATTESA && it > 0 }
+        if (vistaOrganizzatore) {
+            secondi = null
+        }
         _uiState.update {
-            it.copy(booking = UiState.Success(prenotazione.toDetailUi()), secondsLeft = secondi)
+            it.copy(booking = UiState.Success(prenotazione.toDetailUi(vistaOrganizzatore)), secondsLeft = secondi)
         }
         startCountdown(secondi)
     }

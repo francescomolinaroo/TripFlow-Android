@@ -30,6 +30,7 @@ import com.tripflow.feature.itinerary.ui.myitineraries.MyItinerariesScreen
 import com.tripflow.feature.review.ui.ReviewListScreen
 import com.tripflow.feature.review.ui.WriteReviewScreen
 import com.tripflow.feature.catalog.presentation.discover.DiscoverScreen
+import com.tripflow.feature.booking.ui.ReceivedBookingsScreen
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,6 +63,8 @@ class MainActivity : ComponentActivity() {
                         "write_review" -> "booking_list"
                         "trip_detail" -> "discover"
                         "booking_detail" -> "booking_list"
+                        "received_bookings" -> "menu"
+                        "received_booking_detail" -> "received_bookings"
                         else -> "menu"
                     }
                 }
@@ -97,6 +100,18 @@ class MainActivity : ComponentActivity() {
                         "booking_detail" -> BookingDetailScreen(
                             prenotazioneId = selectedBookingId,
                             onBack = { currentScreen = "booking_list" }
+                        )
+                        "received_bookings" -> ReceivedBookingsScreen(
+                            onBack = { currentScreen = "menu" },
+                            onBookingClick = { bookingId ->
+                                selectedBookingId = bookingId
+                                currentScreen = "received_booking_detail"
+                            }
+                        )
+                        "received_booking_detail" -> BookingDetailScreen(
+                            prenotazioneId = selectedBookingId,
+                            vistaOrganizzatore = true,
+                            onBack = { currentScreen = "received_bookings" }
                         )
                         "itinerary_list" -> MyItinerariesScreen(onCreateNewClick = { /* TODO */ })
                         "login" -> LoginScreen(
@@ -194,6 +209,9 @@ fun MenuScreen(onNavigate: (String) -> Unit) { //menu temporaneo per provare le 
             }
             Button(onClick = { onNavigate("booking_list") }, modifier = Modifier.fillMaxWidth()) {
                 Text("My Bookings")
+            }
+            Button(onClick = { onNavigate("received_bookings") }, modifier = Modifier.fillMaxWidth()) {
+                Text("Prenotazioni ricevute")
             }
             Button(onClick = { onNavigate("login") }, modifier = Modifier.fillMaxWidth()) {
                 Text("Login")

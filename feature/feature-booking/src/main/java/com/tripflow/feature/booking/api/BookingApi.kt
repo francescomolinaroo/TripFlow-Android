@@ -22,6 +22,9 @@ interface BookingApi {
     @GET("booking-service/api/prenotazioni/mie")
     suspend fun mie(): List<PrenotazioneResponse>
 
+    @GET("booking-service/api/prenotazioni/cerca")
+    suspend fun ricevute(): List<PrenotazioneResponse>
+
     @GET("booking-service/api/prenotazioni/mie/attive")
     suspend fun mieAttive(): List<PrenotazioneResponse>
 

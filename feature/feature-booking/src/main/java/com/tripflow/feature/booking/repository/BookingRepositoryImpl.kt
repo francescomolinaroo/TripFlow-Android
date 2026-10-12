@@ -31,6 +31,9 @@ class BookingRepositoryImpl(
     override suspend fun miePrenotazioniAttive(): UiState<List<PrenotazioneResponse>> =
         call { api.mieAttive() }
 
+    override suspend fun prenotazioniRicevute(): UiState<List<PrenotazioneResponse>> =
+        call { api.ricevute() }
+
     override suspend fun annullaPrenotazione(id: String): UiState<PrenotazioneResponse> =
         call { api.annulla(id) }
 

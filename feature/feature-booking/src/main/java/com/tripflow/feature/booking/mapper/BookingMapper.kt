@@ -15,6 +15,7 @@ import com.tripflow.feature.booking.model.StatoPrenotazione
 import com.tripflow.feature.booking.ui.ActivityUi
 import com.tripflow.feature.booking.ui.BookingDetailUi
 import com.tripflow.feature.booking.ui.BookingUi
+import com.tripflow.feature.booking.ui.ReceivedBookingUi
 import com.tripflow.feature.booking.ui.TripSummaryUi
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -49,8 +50,37 @@ fun PrenotazioneResponse.toUi(recensita: Boolean = false): BookingUi {
 fun List<PrenotazioneResponse>.toUi(recensite: Set<String> = emptySet()): List<BookingUi> =
     map { it.toUi(recensita = it.id in recensite) }
 
-fun PrenotazioneResponse.toDetailUi(): BookingDetailUi {
+fun PrenotazioneResponse.toReceivedUi(): ReceivedBookingUi = ReceivedBookingUi(
+    id = id,
+    tripId = viaggioId,
+    travelerName = nomeViaggiatore(),
+    tripTitle = titoloViaggio ?: "Viaggio",
+    tripDate = Formatters.dateRange(parseDate(dataInizio), parseDate(dataFine)),
+    participants = Formatters.partecipanti(numeroPartecipanti),
+    totalPrice = Formatters.money(prezzoTotale),
+    status = stato.name,
+    bookedAt = Formatters.dateTime(parseDateTime(dataPrenotazione))
+)
+
+private fun PrenotazioneResponse.nomeViaggiatore(): String {
+    val nome = viaggiatoreNome
+    if (nome == null || nome.isBlank()) {
+        return "Viaggiatore"
+    }
+    return nome
+}
+
+fun PrenotazioneResponse.toDetailUi(vistaOrganizzatore: Boolean = false): BookingDetailUi {
     val pagamento = infoPagamento
+    var canPay = stato == StatoPrenotazione.IN_ATTESA &&
+        (pagamento == null || pagamento.stato == StatoPagamento.FALLITO)
+    var canCancel = stato == StatoPrenotazione.IN_ATTESA || stato == StatoPrenotazione.CONFERMATA
+    var travelerName: String? = null
+    if (vistaOrganizzatore) {
+        canPay = false
+        canCancel = false
+        travelerName = nomeViaggiatore()
+    }
     return BookingDetailUi(
         id = id,
         trip = TripSummaryUi(
@@ -67,9 +97,9 @@ fun PrenotazioneResponse.toDetailUi(): BookingDetailUi {
         notes = note?.takeIf { it.isNotBlank() },
         paymentStatus = pagamento?.stato?.name,
         paymentDetail = pagamento?.toDetail(),
-        canPay = stato == StatoPrenotazione.IN_ATTESA &&
-            (pagamento == null || pagamento.stato == StatoPagamento.FALLITO),
-        canCancel = stato == StatoPrenotazione.IN_ATTESA || stato == StatoPrenotazione.CONFERMATA
+        canPay = canPay,
+        canCancel = canCancel,
+        travelerName = travelerName
     )
 }
 
