@@ -56,12 +56,50 @@ class BookingDetailViewModel(
         paymentJob = viewModelScope.launch {
             _uiState.update { it.copy(isPaying = true, actionError = null) }
             when (val result = repository.avviaPagamento(prenotazioneId)) {
-                is UiState.Success -> waitForConfirmation(prenotazioneId)
-                is UiState.Error -> _uiState.update { it.copy(actionError = result.message) }
-                else -> Unit
+                is UiState.Success -> {
+                    val publishableKey = result.data.publishableKey
+                    if (publishableKey.isNullOrBlank()) {
+                        waitForConfirmation(prenotazioneId)
+                        _uiState.update { it.copy(isPaying = false) }
+                    } else {
+                        val request = PaymentSheetRequest(
+                            clientSecret = result.data.clientSecret,
+                            publishableKey = publishableKey
+                        )
+                        _uiState.update { it.copy(paymentSheetRequest = request) }
+                    }
+                }
+                is UiState.Error -> _uiState.update { it.copy(isPaying = false, actionError = result.message) }
+                else -> _uiState.update { it.copy(isPaying = false) }
             }
+        }
+    }
+
+    fun onPaymentSheetShown() {
+        _uiState.update { it.copy(paymentSheetRequest = null) }
+    }
+
+    fun onPaymentCompleted() {
+        if (prenotazioneId == null) return
+        paymentJob?.cancel()
+        paymentJob = viewModelScope.launch {
+            waitForConfirmation(prenotazioneId)
             _uiState.update { it.copy(isPaying = false) }
         }
+    }
+
+    fun onPaymentCanceled() {
+        _uiState.update { it.copy(isPaying = false) }
+        loadBooking()
+    }
+
+    fun onPaymentFailed(message: String?) {
+        var errore = "Pagamento non riuscito, riprova"
+        if (!message.isNullOrBlank()) {
+            errore = message
+        }
+        _uiState.update { it.copy(isPaying = false, actionError = errore) }
+        loadBooking()
     }
 
     fun onCancelClick() {

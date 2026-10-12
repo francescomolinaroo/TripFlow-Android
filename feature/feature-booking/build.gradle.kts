@@ -41,6 +41,7 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.6.2")
     implementation(libs.converter.gson)
     implementation(libs.kotlinx.coroutines.android)
+    implementation("com.stripe:stripe-android:23.22.0")
     implementation(project(":core:core-model"))
     implementation(project(":core:core-network"))
     implementation(project(":core:core-auth"))

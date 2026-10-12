@@ -28,8 +28,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -47,6 +49,9 @@ import com.tripflow.feature.booking.ui.components.CountdownBanner
 import com.tripflow.feature.booking.ui.components.Section
 import com.tripflow.feature.booking.ui.components.SummaryRow
 import com.tripflow.feature.booking.ui.components.TripSummaryHeader
+import com.stripe.android.PaymentConfiguration
+import com.stripe.android.paymentsheet.PaymentSheet
+import com.stripe.android.paymentsheet.PaymentSheetResult
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,9 +64,32 @@ fun BookingDetailScreen(
     ) { BookingDetailViewModel(prenotazioneId, vistaOrganizzatore) }
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    val paymentSheet = remember(viewModel) {
+        PaymentSheet.Builder { result ->
+            when (result) {
+                is PaymentSheetResult.Completed -> viewModel.onPaymentCompleted()
+                is PaymentSheetResult.Canceled -> viewModel.onPaymentCanceled()
+                is PaymentSheetResult.Failed -> viewModel.onPaymentFailed(result.error.localizedMessage)
+            }
+        }
+    }.build()
 
     LaunchedEffect(Unit) {
         viewModel.loadBooking()
+    }
+
+    LaunchedEffect(uiState.paymentSheetRequest) {
+        val request = uiState.paymentSheetRequest
+        if (request != null) {
+            PaymentConfiguration.init(context, request.publishableKey)
+            paymentSheet.presentWithPaymentIntent(
+                request.clientSecret,
+                PaymentSheet.Configuration.Builder(merchantDisplayName = "TripFlow").build()
+            )
+            viewModel.onPaymentSheetShown()
+        }
     }
 
     if (uiState.showCancelDialog) {

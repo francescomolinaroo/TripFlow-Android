@@ -73,7 +73,7 @@ private fun PrenotazioneResponse.nomeViaggiatore(): String {
 fun PrenotazioneResponse.toDetailUi(vistaOrganizzatore: Boolean = false): BookingDetailUi {
     val pagamento = infoPagamento
     var canPay = stato == StatoPrenotazione.IN_ATTESA &&
-        (pagamento == null || pagamento.stato == StatoPagamento.FALLITO)
+        (pagamento == null || pagamento.stato == StatoPagamento.FALLITO || pagamento.stato == StatoPagamento.IN_ATTESA)
     var canCancel = stato == StatoPrenotazione.IN_ATTESA || stato == StatoPrenotazione.CONFERMATA
     var travelerName: String? = null
     if (vistaOrganizzatore) {

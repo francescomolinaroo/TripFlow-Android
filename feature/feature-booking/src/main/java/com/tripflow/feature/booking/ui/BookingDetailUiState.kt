@@ -8,5 +8,11 @@ data class BookingDetailUiState(
     val isPaying: Boolean = false,
     val isCancelling: Boolean = false,
     val showCancelDialog: Boolean = false,
-    val actionError: String? = null
+    val actionError: String? = null,
+    val paymentSheetRequest: PaymentSheetRequest? = null
+)
+
+data class PaymentSheetRequest(
+    val clientSecret: String,
+    val publishableKey: String
 )
