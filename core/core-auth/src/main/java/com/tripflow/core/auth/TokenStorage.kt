@@ -1,9 +1,15 @@
-package com.tripflow.core.auth
+﻿package com.tripflow.core.auth
 
 import android.content.Context
+import com.tripflow.core.network.ApiClient
 
 class TokenStorage(context: Context) {
     private val preferences = context.getSharedPreferences("tripflow_auth", Context.MODE_PRIVATE)
+
+    init {
+        // Collega automaticamente il token all'interceptor di rete
+        ApiClient.tokenProvider = { getAccessToken() }
+    }
 
     fun save(accessToken: String, refreshToken: String?) {
         preferences.edit()

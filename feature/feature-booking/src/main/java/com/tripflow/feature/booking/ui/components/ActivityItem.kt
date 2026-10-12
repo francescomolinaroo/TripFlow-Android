@@ -2,6 +2,7 @@ package com.tripflow.feature.booking.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,6 +36,7 @@ fun ActivityItem(activity: ActivityUi, onToggle: () -> Unit) {
                 shape = shape
             )
             .background(if (activity.isSelected) TripFlowColors.AccentSoft else Color.Transparent)
+            .clickable { onToggle() }
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)

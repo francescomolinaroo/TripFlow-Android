@@ -17,30 +17,35 @@ import com.tripflow.core.ui.component.RatingStars
 import com.tripflow.core.ui.theme.Dimens
 import com.tripflow.core.ui.theme.TripFlowColors
 import com.tripflow.feature.review.ui.components.RatingBar
+import java.util.Locale
 
 @Composable
-fun ReviewHeader() {
+fun ReviewHeader(subjectName: String?, summary: ReviewSummaryUi) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Dimens.gapM)
     ) {
-        Text("Costa Amalfitana", style = MaterialTheme.typography.bodyMedium, color = TripFlowColors.TextSecondary)
+        if (subjectName != null) {
+            Text(subjectName, style = MaterialTheme.typography.bodyMedium, color = TripFlowColors.TextSecondary)
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(24.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("4.8", style = MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Bold)
-                RatingStars(rating = 4.8, showValue = false)
-                Text("23 recensioni", style = MaterialTheme.typography.bodySmall, color = TripFlowColors.TextSecondary)
+                Text(String.format(Locale.ITALY, "%.1f", summary.average), style = MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Bold)
+                RatingStars(rating = summary.average, showValue = false)
+                Text(
+                    if (summary.count == 1) "1 recensione" else "${summary.count} recensioni",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TripFlowColors.TextSecondary
+                )
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                RatingBar(5, 18, 23)
-                RatingBar(4, 3, 23)
-                RatingBar(3, 2, 23)
-                RatingBar(2, 0, 23)
-                RatingBar(1, 0, 23)
+                for (stelle in 5 downTo 1) {
+                    RatingBar(stelle, summary.distribution[stelle] ?: 0, summary.count)
+                }
             }
         }
         HorizontalDivider(modifier = Modifier.padding(top = Dimens.gapL), color = TripFlowColors.Divider)

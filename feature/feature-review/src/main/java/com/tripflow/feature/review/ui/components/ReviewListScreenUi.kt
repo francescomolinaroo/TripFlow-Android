@@ -6,5 +6,6 @@ data class ReviewUi(
     val date: String,
     val title: String,
     val comment: String,
-    val isModified: Boolean = false
+    val isModified: Boolean = false,
+    val subject: String? = null
 )

@@ -19,9 +19,10 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.tripflow.core.ui.theme.Dimens
 import com.tripflow.core.ui.theme.TripFlowColors
+import com.tripflow.feature.booking.ui.TripSummaryUi
 
 @Composable
-fun TripSummaryHeader() {
+fun TripSummaryHeader(trip: TripSummaryUi) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -32,7 +33,7 @@ fun TripSummaryHeader() {
         horizontalArrangement = Arrangement.spacedBy(Dimens.gapM)
     ) {
         AsyncImage( //immagine a lato, da rivedere. Nota: da considerare sfondo del viaggio nell'header
-            model = null, //mock per ora
+            model = trip.imageUrl,
             contentDescription = null,
             modifier = Modifier
                 .size(64.dp)
@@ -41,8 +42,8 @@ fun TripSummaryHeader() {
             contentScale = ContentScale.Crop
         )
         Column {
-            Text("Costa Amalfitana", style = MaterialTheme.typography.titleMedium)
-            Text("14 – 18 set 2026 · Amalfi", style = MaterialTheme.typography.bodySmall, color = TripFlowColors.TextSecondary)
+            Text(trip.title, style = MaterialTheme.typography.titleMedium)
+            Text("${trip.date} · ${trip.location}", style = MaterialTheme.typography.bodySmall, color = TripFlowColors.TextSecondary)
         }
     }
 }

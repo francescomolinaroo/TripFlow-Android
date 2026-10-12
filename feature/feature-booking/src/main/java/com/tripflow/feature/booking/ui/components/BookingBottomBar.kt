@@ -19,28 +19,42 @@ import com.tripflow.core.ui.theme.Dimens
 import com.tripflow.core.ui.theme.TripFlowColors
 
 @Composable
-fun BookingBottomBar(totalPrice: Int, onPaymentClick: () -> Unit) {
+fun BookingBottomBar(
+    totalPrice: Int,
+    onPaymentClick: () -> Unit,
+    isSubmitting: Boolean = false,
+    error: String? = null
+) {
     Surface(
         shadowElevation = 8.dp,
         color = TripFlowColors.Background
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(horizontal = Dimens.screenPadding, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Dimens.gapL)
+            verticalArrangement = Arrangement.spacedBy(Dimens.gapM)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Totale", style = MaterialTheme.typography.labelSmall, color = TripFlowColors.TextSecondary)
-                Text("€ $totalPrice", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            if (error != null) {
+                Text(error, style = MaterialTheme.typography.bodySmall, color = TripFlowColors.Error)
             }
-            PrimaryButton(
-                text = "Vai al pagamento",
-                onClick = onPaymentClick,
-                modifier = Modifier.weight(1.5f)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimens.gapL)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Totale", style = MaterialTheme.typography.labelSmall, color = TripFlowColors.TextSecondary)
+                    Text("€ $totalPrice", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                }
+                PrimaryButton(
+                    text = if (isSubmitting) "Prenotazione in corso..." else "Vai al pagamento",
+                    onClick = onPaymentClick,
+                    modifier = Modifier.weight(1.5f),
+                    enabled = !isSubmitting
+                )
+            }
         }
     }
 }

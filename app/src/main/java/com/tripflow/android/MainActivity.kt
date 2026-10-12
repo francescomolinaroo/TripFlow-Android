@@ -17,8 +17,10 @@ import androidx.compose.ui.unit.dp
 import com.tripflow.core.auth.AuthRepository
 import com.tripflow.core.network.auth.UserResponse
 import com.tripflow.core.ui.theme.TripFlowTheme
+import com.tripflow.feature.booking.ui.BookingDetailScreen
 import com.tripflow.feature.booking.ui.BookingListScreen
 import com.tripflow.feature.booking.ui.BookingScreen
+import com.tripflow.feature.booking.ui.BookingUi
 import com.tripflow.feature.auth.EditProfileScreen
 import com.tripflow.feature.auth.LoginScreen
 import com.tripflow.feature.auth.RegisterScreen
@@ -39,6 +41,9 @@ class MainActivity : ComponentActivity() {
                 var editingUser by remember { mutableStateOf<UserResponse?>(null) }
 
                 var selectedTripId by remember {mutableStateOf<String?>(null) }
+                var selectedBookingId by remember { mutableStateOf<String?>(null) }
+                var reviewBooking by remember { mutableStateOf<BookingUi?>(null) }
+                var reviewListTripId by remember { mutableStateOf<String?>(null) }
 
                 LaunchedEffect(Unit) {
                     currentScreen = if (authRepository.checkSession().isSuccess) {
@@ -52,8 +57,11 @@ class MainActivity : ComponentActivity() {
                     currentScreen = when (currentScreen) {
                         "booking_form", "booking_list", "login", "register", "discover" -> "menu"
                         "dashboard" -> "menu"
-                        "edit_profile", "review_list" -> "dashboard"
+                        "edit_profile" -> "dashboard"
+                        "review_list" -> if (reviewListTripId != null) "booking_list" else "dashboard"
+                        "write_review" -> "booking_list"
                         "trip_detail" -> "discover"
+                        "booking_detail" -> "booking_list"
                         else -> "menu"
                     }
                 }
@@ -64,10 +72,31 @@ class MainActivity : ComponentActivity() {
                             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         }
                         "menu" -> MenuScreen(onNavigate = { currentScreen = it })
-                        "booking_form" -> BookingScreen(onBack = { currentScreen = "menu" })
+                        "booking_form" -> BookingScreen(
+                            viaggioId = selectedTripId,
+                            onBack = { currentScreen = "menu" },
+                            onPaymentClick = { bookingId ->
+                                selectedBookingId = bookingId
+                                currentScreen = "booking_detail"
+                            }
+                            )
                         "booking_list" -> BookingListScreen(
-                            onBookingClick = { currentScreen = "menu" },
-                            onWriteReviewClick = { currentScreen = "write_review" }
+                            onBookingClick = { bookingId ->
+                                selectedBookingId = bookingId
+                                currentScreen = "booking_detail"
+                            },
+                            onWriteReviewClick = { booking ->
+                                reviewBooking = booking
+                                currentScreen = "write_review"
+                            },
+                            onPayClick = { bookingId ->
+                                selectedBookingId = bookingId
+                                currentScreen = "booking_detail"
+                            }
+                        )
+                        "booking_detail" -> BookingDetailScreen(
+                            prenotazioneId = selectedBookingId,
+                            onBack = { currentScreen = "booking_list" }
                         )
                         "itinerary_list" -> MyItinerariesScreen(onCreateNewClick = { /* TODO */ })
                         "login" -> LoginScreen(
@@ -89,8 +118,6 @@ class MainActivity : ComponentActivity() {
                                     tripId = id,
                                     onBackClick = { currentScreen = "discover" },
                                     onBookClick = { tripIdToBook ->
-                                        // passare id al modulo booking
-                                        // per ora navighiamo al form generico
                                         currentScreen = "booking_form"
                                     }
                                 )
@@ -98,7 +125,7 @@ class MainActivity : ComponentActivity() {
                                 currentScreen = "discover"
                             }
                         }
-                        "register" -> RegisterScreen(
+                        "register" -> RegisterScreen( authRepository = authRepository,
                             onRegisterClick = { currentScreen = "login" },
                             onLoginClick = { currentScreen = "login" },
                             onBackClick = { currentScreen = "login" }
@@ -112,7 +139,10 @@ class MainActivity : ComponentActivity() {
                                 currentScreen = "edit_profile"
                             },
                             onBookingsClick = { currentScreen = "booking_list" },
-                            onReviewsClick = { currentScreen = "review_list" }
+                            onReviewsClick = {
+                                reviewListTripId = null
+                                currentScreen = "review_list"
+                            }
                         )
                         "edit_profile" -> editingUser?.let { user ->
                             EditProfileScreen(
@@ -123,9 +153,22 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         "review_list" -> ReviewListScreen(
-                            onBackClick = { currentScreen = "dashboard" }
+                            oggettoId = reviewListTripId,
+                            onBackClick = {
+                                currentScreen = if (reviewListTripId != null) "booking_list" else "dashboard"
+                            }
                         )
-                        "write_review" -> WriteReviewScreen(onBack = { currentScreen = "menu" })
+                        "write_review" -> WriteReviewScreen(
+                            prenotazioneId = reviewBooking?.id,
+                            viaggioId = reviewBooking?.tripId,
+                            tripTitle = reviewBooking?.title ?: "Viaggio",
+                            tripSubtitle = reviewBooking?.let { "${it.date} · ${it.location}" },
+                            onBack = { currentScreen = "booking_list" },
+                            onPublish = {
+                                reviewListTripId = reviewBooking?.tripId
+                                currentScreen = "review_list"
+                            }
+                        )
                     }
                 }
             }
