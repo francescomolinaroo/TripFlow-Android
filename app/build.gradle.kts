@@ -34,7 +34,7 @@ android {
         compose = true
     }
 }
-
+ 
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
@@ -53,6 +53,7 @@ dependencies {
     implementation(project(":feature:feature-auth"))
     implementation(project(":feature:feature-itinerary"))
     implementation(project(":feature:feature-catalog"))
+
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

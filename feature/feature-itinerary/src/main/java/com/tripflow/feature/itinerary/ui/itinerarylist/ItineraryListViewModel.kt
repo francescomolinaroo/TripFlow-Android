@@ -6,15 +6,14 @@ import com.tripflow.core.model.UiState
 import com.tripflow.feature.itinerary.model.ItinerarySummary
 import com.tripflow.feature.itinerary.repository.ItineraryRepository
 import com.tripflow.feature.itinerary.ui.viewmodels.ItineraryListState
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-// TODO: Add @HiltViewModel and @Inject when Hilt is configured in the project
-// import dagger.hilt.android.lifecycle.HiltViewModel
-// import javax.inject.Inject
-// @HiltViewModel
-class ItineraryListViewModel(
+@HiltViewModel
+class ItineraryListViewModel @Inject constructor(
     private val repository: ItineraryRepository
 ) : ViewModel() {
 

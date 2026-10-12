@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.hilt)
+    id("com.google.devtools.ksp") version "2.2.10-2.0.2"
 }
 
 android {
@@ -25,6 +27,7 @@ dependencies {
     api(project(":core:core-model"))
     api(project(":core:core-network"))
     implementation(project(":core:core-ui"))
+    implementation(project(":core:core-auth"))
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
@@ -41,6 +44,11 @@ dependencies {
     implementation(libs.converter.gson)
     implementation(libs.coil.compose)
     implementation(libs.kotlinx.coroutines.android)
+
+    implementation(libs.hilt.android)
+    implementation(libs.hilt.lifecycle.viewmodel)
+    implementation(libs.hilt.navigation.compose)
+    ksp(libs.hilt.compiler)
 
     testImplementation(libs.junit)
     testImplementation(platform(libs.androidx.compose.bom))
