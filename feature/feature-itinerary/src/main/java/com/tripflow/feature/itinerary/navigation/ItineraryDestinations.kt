@@ -4,7 +4,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.navArgument
+import androidx.navigation.navArgument
 import com.tripflow.feature.itinerary.model.ItinerarySummary
 import com.tripflow.feature.itinerary.ui.addstage.AddStageScreen
 import com.tripflow.feature.itinerary.ui.itinerarydetail.ItineraryDetailScreen
@@ -40,7 +40,7 @@ object ItineraryDestinations {
             route = ROUTE_DETAIL,
             arguments = listOf(navArgument("itineraryId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val itineraryId = backStackEntry.getString() ?: ""
+            val itineraryId = backStackEntry.arguments?.getString("itineraryId") ?: ""
             ItineraryDetailScreen(
                 itineraryId = itineraryId,
                 onAddStageClick = { onNavigateToAddStage(itineraryId) }
@@ -51,7 +51,7 @@ object ItineraryDestinations {
             route = ROUTE_ADD_STAGE,
             arguments = listOf(navArgument("itineraryId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val itineraryId = backStackEntry.getString() ?: ""
+            val itineraryId = backStackEntry.arguments?.getString("itineraryId") ?: ""
             AddStageScreen(itineraryId = itineraryId)
         }
     }

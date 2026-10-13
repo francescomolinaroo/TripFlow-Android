@@ -40,9 +40,8 @@ object ItineraryModule {
     @Singleton
     fun provideItineraryRepository(
         api: ItineraryApi,
-        authTokenProvider: () -> String,
-        mapper: ItineraryMapper = ItineraryMapper
+        authTokenProvider: () -> String
     ): ItineraryRepository {
-        return ItineraryRepositoryImpl(api, authTokenProvider, mapper)
+        return ItineraryRepositoryImpl(api, authTokenProvider, ItineraryMapper)
     }
 }

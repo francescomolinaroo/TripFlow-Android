@@ -1,8 +1,8 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
-    id("com.google.devtools.ksp") version "2.2.10-2.0.2"
 }
 
 android {
@@ -46,7 +46,6 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     implementation(libs.hilt.android)
-    implementation(libs.hilt.lifecycle.viewmodel)
     implementation(libs.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
 
