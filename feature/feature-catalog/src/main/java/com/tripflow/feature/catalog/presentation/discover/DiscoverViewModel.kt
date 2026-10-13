@@ -2,6 +2,7 @@ package com.tripflow.feature.catalog.presentation.discover
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tripflow.core.auth.AuthRepository
 import com.tripflow.core.model.UiState
 import com.tripflow.core.network.catalog.dto.TripResponseDTO
 import com.tripflow.feature.catalog.data.repository.CatalogRepositoryImpl
@@ -20,7 +21,8 @@ data class DiscoverFilters(
 )
 
 class DiscoverViewModel(
-    private val repository: CatalogRepository = CatalogRepositoryImpl()
+    private val repository: CatalogRepository = CatalogRepositoryImpl(),
+    private val authRepository: AuthRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState<List<TripResponseDTO>>>(UiState.Loading)
@@ -29,8 +31,25 @@ class DiscoverViewModel(
     private val _filters = MutableStateFlow(DiscoverFilters())
     val filters: StateFlow<DiscoverFilters> = _filters.asStateFlow()
 
+    private val _userName = MutableStateFlow<String?>(null)
+    val userName: StateFlow<String?> = _userName.asStateFlow()
+
+    private val _userImageUrl = MutableStateFlow<String?>(null)
+    val userImageUrl: StateFlow<String?> = _userImageUrl.asStateFlow()
+
     init {
         loadTrips()
+        loadUser()
+    }
+
+    private fun loadUser() {
+        if (authRepository == null) return
+        viewModelScope.launch {
+            authRepository.getMe().onSuccess { user ->
+                _userName.value = "${user.firstName} ${user.lastName}"
+                _userImageUrl.value = user.profileImage
+            }
+        }
     }
 
     fun loadTrips() {

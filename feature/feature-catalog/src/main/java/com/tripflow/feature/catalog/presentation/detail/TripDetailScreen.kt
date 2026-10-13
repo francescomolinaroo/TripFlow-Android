@@ -271,7 +271,7 @@ private fun TripDetailData.toUiModel(): TripDetailUiModel {
     return TripDetailUiModel(
         title = t.name,
         destination = t.destination,
-        ratingValue = "4.8", // TODO: Calcolare media dalle recensioni
+        ratingValue = "4.8", // calcolare media dalle recensioni
         ratingString = "4.8 (${this.reviews.size})",
         dateString = if (start != null && end != null) Formatters.dateRange(start, end) else "",
         durationString = "$days giorni",

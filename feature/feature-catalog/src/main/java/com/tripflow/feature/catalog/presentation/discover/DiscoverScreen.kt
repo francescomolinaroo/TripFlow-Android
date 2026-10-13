@@ -1,5 +1,6 @@
 package com.tripflow.feature.catalog.presentation.discover
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,10 +18,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.tripflow.core.auth.AuthRepository
 import com.tripflow.core.model.UiState
 import com.tripflow.core.network.catalog.dto.TripResponseDTO
 import com.tripflow.core.ui.component.InfoChip
@@ -36,26 +39,34 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 
-class DiscoverViewModelFactory : ViewModelProvider.Factory {
+class DiscoverViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return DiscoverViewModel(CatalogRepositoryImpl()) as T
+        return DiscoverViewModel(
+            repository = CatalogRepositoryImpl(),
+            authRepository = AuthRepository(context)
+        ) as T
     }
 }
 
 @Composable
 fun DiscoverScreen(
-    viewModel: DiscoverViewModel = viewModel(factory = DiscoverViewModelFactory()),
+    viewModel: DiscoverViewModel = viewModel(
+        factory = DiscoverViewModelFactory(LocalContext.current.applicationContext)
+    ),
     onTripClick: (String) -> Unit,
     onProfileClick: () -> Unit
 ) {
 
     val uiState by viewModel.uiState.collectAsState()
     val filters by viewModel.filters.collectAsState()
+    val userName by viewModel.userName.collectAsState()
+    val userImageUrl by viewModel.userImageUrl.collectAsState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(MaterialTheme.colorScheme.background)
     ) {
 
@@ -63,6 +74,8 @@ fun DiscoverScreen(
 
         DiscoverHeader(
             tripsCount = tripsCount,
+            userName = userName,
+            userImageUrl = userImageUrl,
             onProfileClick = onProfileClick
         )
 
@@ -158,6 +171,8 @@ fun DiscoverScreen(
 @Composable
 private fun DiscoverHeader(
     tripsCount: Int,
+    userName: String?,
+    userImageUrl: String?,
     onProfileClick: () -> Unit
 ) {
     Row(
@@ -180,9 +195,9 @@ private fun DiscoverHeader(
         }
 
         UserBadge(
-            name = "Giulio Rossi",
+            name = userName,
             caption = null,
-            imageUrl = null,
+            imageUrl = userImageUrl,
             modifier = Modifier.clickable { onProfileClick() }
         )
     }
