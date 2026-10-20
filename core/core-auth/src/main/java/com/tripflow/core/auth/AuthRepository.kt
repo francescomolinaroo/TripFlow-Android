@@ -1,12 +1,18 @@
 package com.tripflow.core.auth
 
 import android.content.Context
+import android.net.Uri
 import com.tripflow.core.network.ApiClient
+import com.tripflow.core.network.auth.ChangePasswordRequest
+import com.tripflow.core.network.auth.PublicUserResponse
 import com.tripflow.core.network.auth.RegisterRequest
 import com.tripflow.core.network.auth.RegisterResponse
-import com.tripflow.core.network.auth.ChangePasswordRequest
 import com.tripflow.core.network.auth.UpdateProfileRequest
+import com.tripflow.core.network.auth.UserLookupRequest
 import com.tripflow.core.network.auth.UserResponse
+import okhttp3.MediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.HttpException
 
 class AuthRepository(context: Context? = null) {
@@ -77,6 +83,38 @@ class AuthRepository(context: Context? = null) {
         }
     }
 
+    suspend fun uploadAvatar(uri: Uri, context: Context): Result<String> {
+        return try {
+            val token = tokenStorage?.getAccessToken()
+                ?: return Result.failure(IllegalStateException("Sessione non disponibile"))
+
+            val contentResolver = context.contentResolver
+            val mimeType = contentResolver.getType(uri) ?: "image/jpeg"
+            val extension = when (mimeType) {
+                "image/png" -> "png"
+                "image/webp" -> "webp"
+                else -> "jpg"
+            }
+            val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                ?: return Result.failure(IllegalStateException("Impossibile leggere il file immagine"))
+
+            val mediaType = MediaType.parse(mimeType)
+            val requestBody = RequestBody.create(mediaType, bytes)
+            val part = MultipartBody.Part.createFormData(
+                "file",
+                "avatar.$extension",
+                requestBody
+            )
+
+            val response = ApiClient.authApi.uploadAvatar("Bearer $token", part)
+            val url = response["url"]
+                ?: return Result.failure(IllegalStateException("URL avatar non restituito dal server"))
+            Result.success(url)
+        } catch (exception: Exception) {
+            Result.failure(exception)
+        }
+    }
+
     suspend fun changePassword(newPassword: String): Result<Unit> {
         return try {
             val token = tokenStorage?.getAccessToken()
@@ -115,7 +153,34 @@ class AuthRepository(context: Context? = null) {
         }
     }
 
+    suspend fun getPublicUserByKeycloakId(keycloakId: String): Result<PublicUserResponse> {
+        return try {
+            Result.success(ApiClient.authApi.getPublicUserByKeycloakId(keycloakId))
+        } catch (exception: Exception) {
+            Result.failure(exception)
+        }
+    }
+
+    suspend fun getPublicUserById(id: String): Result<PublicUserResponse> {
+        return try {
+            Result.success(ApiClient.authApi.getPublicUserById(id))
+        } catch (exception: Exception) {
+            Result.failure(exception)
+        }
+    }
+
+    suspend fun lookupUsers(emails: List<String>): Result<List<PublicUserResponse>> {
+        return try {
+            val token = tokenStorage?.getAccessToken()
+                ?: return Result.failure(IllegalStateException("Sessione non disponibile"))
+            Result.success(ApiClient.authApi.lookupUsers("Bearer $token", UserLookupRequest(emails)))
+        } catch (exception: Exception) {
+            Result.failure(exception)
+        }
+    }
+
     fun logout() {
         tokenStorage?.clear()
     }
 }
+

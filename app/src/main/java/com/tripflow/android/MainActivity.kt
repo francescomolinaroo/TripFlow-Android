@@ -1,5 +1,4 @@
 package com.tripflow.android
-
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -39,36 +38,39 @@ class MainActivity : ComponentActivity() {
         setContent {
             TripFlowTheme {
                 var currentScreen by remember { mutableStateOf("checking_session") }
+                var currentUser by remember { mutableStateOf<UserResponse?>(null) }
                 var editingUser by remember { mutableStateOf<UserResponse?>(null) }
-
-                var selectedTripId by remember {mutableStateOf<String?>(null) }
+                var selectedTripId by remember { mutableStateOf<String?>(null) }
                 var selectedBookingId by remember { mutableStateOf<String?>(null) }
                 var reviewBooking by remember { mutableStateOf<BookingUi?>(null) }
                 var reviewListTripId by remember { mutableStateOf<String?>(null) }
-
+                var loginSuccessMessage by remember { mutableStateOf<String?>(null) }
                 LaunchedEffect(Unit) {
-                    currentScreen = if (authRepository.checkSession().isSuccess) {
-                        "dashboard"
+                    val sessionResult = authRepository.checkSession()
+                    if (sessionResult.isSuccess) {
+                        currentUser = sessionResult.getOrNull()
+                        currentScreen = "discover"
                     } else {
-                        "login"
+                        currentScreen = "login"
                     }
                 }
-
-                BackHandler(enabled = currentScreen != "menu") {
+                BackHandler(enabled = currentScreen !in setOf("discover", "login", "checking_session")) {
                     currentScreen = when (currentScreen) {
-                        "booking_form", "booking_list", "login", "register", "discover" -> "menu"
-                        "dashboard" -> "menu"
+                        "booking_form" -> "trip_detail"
+                        "trip_detail" -> "discover"
+                        "booking_detail" -> "booking_list"
+                        "booking_list" -> "dashboard"
+                        "dashboard" -> "discover"
                         "edit_profile" -> "dashboard"
                         "review_list" -> if (reviewListTripId != null) "booking_list" else "dashboard"
                         "write_review" -> "booking_list"
-                        "trip_detail" -> "discover"
-                        "booking_detail" -> "booking_list"
                         "received_bookings" -> "menu"
                         "received_booking_detail" -> "received_bookings"
-                        else -> "menu"
+                        "register" -> "login"
+                        "itinerary_list" -> "dashboard"
+                        else -> "discover"
                     }
                 }
-
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     when (currentScreen) {
                         "checking_session" -> Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
@@ -77,12 +79,12 @@ class MainActivity : ComponentActivity() {
                         "menu" -> MenuScreen(onNavigate = { currentScreen = it })
                         "booking_form" -> BookingScreen(
                             viaggioId = selectedTripId,
-                            onBack = { currentScreen = "menu" },
+                            onBack = { currentScreen = "trip_detail" },
                             onPaymentClick = { bookingId ->
                                 selectedBookingId = bookingId
                                 currentScreen = "booking_detail"
                             }
-                            )
+                        )
                         "booking_list" -> BookingListScreen(
                             onBookingClick = { bookingId ->
                                 selectedBookingId = bookingId
@@ -116,16 +118,30 @@ class MainActivity : ComponentActivity() {
                         "itinerary_list" -> MyItinerariesScreen(onCreateNewClick = { /* TODO */ })
                         "login" -> LoginScreen(
                             authRepository = authRepository,
-                            onLoginClick = { currentScreen = "dashboard" },
-                            onRegisterClick = { currentScreen = "register" },
-                            onContinueWithoutLogin = { currentScreen = "menu" }
+                            onLoginClick = { user ->
+                                currentUser = user
+                                loginSuccessMessage = null
+                                currentScreen = "discover"
+                            },
+                            onRegisterClick = {
+                                loginSuccessMessage = null
+                                currentScreen = "register"
+                            },
+                            onContinueWithoutLogin = {
+                                currentUser = null
+                                loginSuccessMessage = null
+                                currentScreen = "discover"
+                            },
+                            successMessage = loginSuccessMessage
                         )
                         "discover" -> DiscoverScreen(
                             onTripClick = { tripId ->
                                 selectedTripId = tripId
                                 currentScreen = "trip_detail"
                             },
-                            onProfileClick = { currentScreen = "dashboard" }
+                            onProfileClick = {
+                                currentScreen = if (currentUser != null) "dashboard" else "login"
+                            }
                         )
                         "trip_detail" -> {
                             selectedTripId?.let { id ->
@@ -133,6 +149,7 @@ class MainActivity : ComponentActivity() {
                                     tripId = id,
                                     onBackClick = { currentScreen = "discover" },
                                     onBookClick = { tripIdToBook ->
+                                        selectedTripId = tripIdToBook
                                         currentScreen = "booking_form"
                                     }
                                 )
@@ -140,15 +157,26 @@ class MainActivity : ComponentActivity() {
                                 currentScreen = "discover"
                             }
                         }
-                        "register" -> RegisterScreen( authRepository = authRepository,
-                            onRegisterClick = { currentScreen = "login" },
+                        "register" -> RegisterScreen(
+                            authRepository = authRepository,
+                            onRegisterClick = {
+                                loginSuccessMessage = "Registrazione completata, ora puoi accedere"
+                                currentScreen = "login"
+                            },
                             onLoginClick = { currentScreen = "login" },
                             onBackClick = { currentScreen = "login" }
                         )
                         "dashboard" -> UserDashboardScreen(
                             authRepository = authRepository,
-                            onLogoutClick = { currentScreen = "login" },
-                            onSessionExpired = { currentScreen = "login" },
+                            onBackClick = { currentScreen = "discover" },
+                            onLogoutClick = {
+                                currentUser = null
+                                currentScreen = "login"
+                            },
+                            onSessionExpired = {
+                                currentUser = null
+                                currentScreen = "login"
+                            },
                             onEditProfileClick = { user ->
                                 editingUser = user
                                 currentScreen = "edit_profile"
@@ -164,7 +192,16 @@ class MainActivity : ComponentActivity() {
                                 user = user,
                                 authRepository = authRepository,
                                 onBackClick = { currentScreen = "dashboard" },
-                                onSaved = { currentScreen = "dashboard" }
+                                onSaved = { updatedUser ->
+                                    currentUser = updatedUser
+                                    editingUser = updatedUser
+                                    currentScreen = "dashboard"
+                                },
+                                onAccountDeleted = {
+                                    currentUser = null
+                                    editingUser = null
+                                    currentScreen = "login"
+                                }
                             )
                         }
                         "review_list" -> ReviewListScreen(
@@ -177,7 +214,7 @@ class MainActivity : ComponentActivity() {
                             prenotazioneId = reviewBooking?.id,
                             viaggioId = reviewBooking?.tripId,
                             tripTitle = reviewBooking?.title ?: "Viaggio",
-                            tripSubtitle = reviewBooking?.let { "${it.date} · ${it.location}" },
+                            tripSubtitle = reviewBooking?.let { "${it.date} \u2022 ${it.location}" },
                             onBack = { currentScreen = "booking_list" },
                             onPublish = {
                                 reviewListTripId = reviewBooking?.tripId
@@ -190,10 +227,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
 @Composable
-fun MenuScreen(onNavigate: (String) -> Unit) { //menu temporaneo per provare le mie schermate. Aggiungete le vostre finchè non creiamo il menu
-    Scaffold { padding -> // di navigazione definitivo
+fun MenuScreen(onNavigate: (String) -> Unit) {
+    Scaffold { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -234,5 +270,3 @@ fun MenuScreen(onNavigate: (String) -> Unit) { //menu temporaneo per provare le 
         }
     }
 }
-
-

@@ -23,6 +23,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +36,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.tripflow.core.auth.AuthRepository
+import com.tripflow.core.network.auth.UserResponse
 import com.tripflow.core.ui.component.PrimaryButton
 import com.tripflow.core.ui.component.SecondaryButton
 import com.tripflow.core.ui.component.TripFlowTextField
@@ -43,28 +45,56 @@ import com.tripflow.core.ui.theme.TripFlowColors
 import com.tripflow.core.ui.theme.TripFlowTheme
 import kotlinx.coroutines.launch
 
+// --- Helpers di validazione ---
+private fun isEmailValid(email: String): Boolean =
+    email.isNotBlank() && android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+
+private fun isPasswordValidForLogin(password: String): Boolean =
+    password.length >= 6
+
+// --------------------------------
+
 @Composable
 fun LoginScreen(
     authRepository: AuthRepository = AuthRepository(),
-    onLoginClick: () -> Unit = {},
+    onLoginClick: (UserResponse) -> Unit = {},
     onRegisterClick: () -> Unit = {},
-    onContinueWithoutLogin: () -> Unit = {}
+    onContinueWithoutLogin: () -> Unit = {},
+    successMessage: String? = null
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var emailError by remember { mutableStateOf<String?>(null) }
-    var passwordError by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    // Validazione in tempo reale
+    val emailError: String? = when {
+        email.isEmpty() -> null
+        !isEmailValid(email) -> "Inserisci un'email valida (es. nome@esempio.it)"
+        else -> null
+    }
+    val passwordError: String? = when {
+        password.isEmpty() -> null
+        !isPasswordValidForLogin(password) -> "La password deve essere di almeno 6 caratteri"
+        else -> null
+    }
+
+    val emailIsValid = email.isNotEmpty() && emailError == null
+    val passwordIsValid = password.isNotEmpty() && passwordError == null
+
+    LaunchedEffect(successMessage) {
+        successMessage?.let { snackbarHostState.showSnackbar(it) }
+    }
+
     Scaffold(
         containerColor = TripFlowColors.Background,
         snackbarHost = {
-            SnackbarHost(snackbarHostState) {
+            SnackbarHost(snackbarHostState) { data ->
+                val isSuccess = data.visuals.message == successMessage
                 Snackbar(
-                    snackbarData = it,
-                    containerColor = TripFlowColors.Error,
+                    snackbarData = data,
+                    containerColor = if (isSuccess) TripFlowColors.Accent else TripFlowColors.Error,
                     contentColor = TripFlowColors.Background
                 )
             }
@@ -107,6 +137,7 @@ fun LoginScreen(
                 label = "Email",
                 placeholder = "nome@esempio.it",
                 error = emailError,
+                isValid = emailIsValid,
                 keyboardType = KeyboardType.Email,
                 leading = { Icon(Icons.Default.AccountCircle, contentDescription = null, tint = TripFlowColors.TextSecondary) }
             )
@@ -117,20 +148,22 @@ fun LoginScreen(
                 placeholder = "La tua password",
                 isPassword = true,
                 error = passwordError,
+                isValid = passwordIsValid,
                 leading = { Icon(Icons.Default.Lock, contentDescription = null, tint = TripFlowColors.TextSecondary) }
             )
 
             PrimaryButton(
                 text = "Accedi",
                 onClick = {
-                    emailError = if (email.isBlank()) "Inserisci l'email" else null
-                    passwordError = if (password.isBlank()) "Inserisci la password" else null
-                    if (emailError == null && passwordError == null) {
+                    // Validazione finale al submit
+                    val emailOk = isEmailValid(email)
+                    val passwordOk = isPasswordValidForLogin(password)
+                    if (emailOk && passwordOk) {
                         isLoading = true
                         scope.launch {
                             try {
                                 val result = authRepository.login(email, password)
-                                result.onSuccess { onLoginClick() }
+                                result.onSuccess { user -> onLoginClick(user) }
                                 result.onFailure {
                                     scope.launch {
                                         snackbarHostState.showSnackbar("Accesso non riuscito. Controlla email e password.")
@@ -139,6 +172,13 @@ fun LoginScreen(
                             } finally {
                                 isLoading = false
                             }
+                        }
+                    } else {
+                        scope.launch {
+                            snackbarHostState.showSnackbar(
+                                if (!emailOk) "Inserisci un'email valida"
+                                else "La password deve essere di almeno 6 caratteri"
+                            )
                         }
                     }
                 },

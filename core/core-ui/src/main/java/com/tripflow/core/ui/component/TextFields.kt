@@ -25,6 +25,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
@@ -47,6 +48,7 @@ fun TripFlowTextField(
     modifier: Modifier = Modifier,
     placeholder: String = "",
     error: String? = null,
+    isValid: Boolean = false,
     enabled: Boolean = true,
     isPassword: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Text,
@@ -54,12 +56,19 @@ fun TripFlowTextField(
     trailing: (@Composable () -> Unit)? = null,
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
+
     val borderColor = when {
         error != null -> TripFlowColors.FieldError
+        isValid -> TripFlowColors.Success
         value.isNotEmpty() -> TripFlowColors.Accent
         else -> TripFlowColors.Border
     }
-    val borderWidth = if (error != null || value.isNotEmpty()) 1.5.dp else 1.dp
+    val borderWidth = when {
+        error != null -> 1.5.dp
+        isValid -> 1.5.dp
+        value.isNotEmpty() -> 1.5.dp
+        else -> 1.dp
+    }
     val shape = RoundedCornerShape(Dimens.radiusField)
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -113,6 +122,12 @@ fun TripFlowTextField(
                                 tint = TripFlowColors.TextSecondary
                             )
                         }
+                    } else if (isValid && error == null) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Campo valido",
+                            tint = TripFlowColors.Success
+                        )
                     } else {
                         trailing?.invoke()
                     }
@@ -127,6 +142,9 @@ fun TripFlowTextField(
                 color = TripFlowColors.FieldError,
                 modifier = Modifier.padding(top = Dimens.gapS),
             )
+        } else if (isValid) {
+            // Mantieni spazio fisso per evitare layout shift
+            Spacer(modifier = Modifier.height(MaterialTheme.typography.bodySmall.lineHeight.value.dp + Dimens.gapS))
         }
     }
 }

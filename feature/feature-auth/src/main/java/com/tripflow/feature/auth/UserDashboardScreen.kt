@@ -12,6 +12,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.CreditCard
@@ -46,6 +47,7 @@ import androidx.compose.ui.tooling.preview.Preview
 @Composable
 fun UserDashboardScreen(
     authRepository: AuthRepository = AuthRepository(),
+    onBackClick: (() -> Unit)? = null,
     onLogoutClick: () -> Unit = {},
     onSessionExpired: () -> Unit = {},
     onEditProfileClick: (UserResponse) -> Unit = {},
@@ -73,11 +75,25 @@ fun UserDashboardScreen(
                 .padding(Dimens.screenPadding),
             verticalArrangement = Arrangement.spacedBy(Dimens.gapL)
         ) {
-            Text(
-                text = "Il mio profilo",
-                style = MaterialTheme.typography.headlineMedium,
-                color = TripFlowColors.TextPrimary
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimens.gapS)
+            ) {
+                if (onBackClick != null) {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Indietro",
+                            tint = TripFlowColors.TextPrimary
+                        )
+                    }
+                }
+                Text(
+                    text = "Il mio profilo",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = TripFlowColors.TextPrimary
+                )
+            }
 
             when (val state = profileState) {
                 UiState.Loading -> Text("Caricamento profilo...", color = TripFlowColors.TextSecondary)
@@ -107,7 +123,7 @@ fun UserDashboardScreen(
                     )
                     if (role == DashboardRole.ORGANIZER) {
                         ProfileAction(icon = Icons.Default.CreditCard, title = "I miei viaggi (demo)", onClick = {})
-                        ProfileAction(icon = Icons.Default.Edit, title = "Gestisci attività (demo)", onClick = {})
+                        ProfileAction(icon = Icons.Default.Edit, title = "Gestisci attivitÃ  (demo)", onClick = {})
                         ProfileAction(icon = Icons.Default.Star, title = "Prenotazioni ricevute (demo)", onClick = {})
                     }
                 }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,7 +44,7 @@ fun UserBadge(
                 )
             }
             Text(
-                text = name ?: "…",
+                text = name ?: "Utente",
                 style = MaterialTheme.typography.titleSmall,
                 color = TripFlowColors.TextPrimary,
             )
@@ -58,6 +59,18 @@ fun Avatar(
     imageUrl: String? = null,
     size: Dp = 44.dp,
 ) {
+    val resolvedUrl = remember(imageUrl) {
+        imageUrl?.let {
+            if (it.contains("localhost")) {
+                it.replace("localhost", "10.0.2.2")
+            } else if (it.startsWith("/")) {
+                "http://10.0.2.2:8080/user-auth-service$it"
+            } else {
+                it
+            }
+        }
+    }
+
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -65,9 +78,9 @@ fun Avatar(
             .clip(CircleShape)
             .background(TripFlowColors.AccentSoft),
     ) {
-        if (imageUrl != null) {
+        if (resolvedUrl != null) {
             AsyncImage(
-                model = imageUrl,
+                model = resolvedUrl,
                 contentDescription = name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.size(size).clip(CircleShape),
