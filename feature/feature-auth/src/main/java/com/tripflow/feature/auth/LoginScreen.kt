@@ -1,4 +1,4 @@
-package com.tripflow.feature.auth
+﻿package com.tripflow.feature.auth
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -59,6 +59,7 @@ fun LoginScreen(
     authRepository: AuthRepository = AuthRepository(),
     onLoginClick: (UserResponse) -> Unit = {},
     onRegisterClick: () -> Unit = {},
+    onForgotPasswordClick: () -> Unit = {},
     onContinueWithoutLogin: () -> Unit = {},
     successMessage: String? = null
 ) {
@@ -152,10 +153,26 @@ fun LoginScreen(
                 leading = { Icon(Icons.Default.Lock, contentDescription = null, tint = TripFlowColors.TextSecondary) }
             )
 
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(
+                    onClick = onForgotPasswordClick,
+                    enabled = !isLoading
+                ) {
+                    Text(
+                        "Password dimenticata?",
+                        color = TripFlowColors.Accent,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
             PrimaryButton(
                 text = "Accedi",
                 onClick = {
-                    // Validazione finale al submit
                     val emailOk = isEmailValid(email)
                     val passwordOk = isPasswordValidForLogin(password)
                     if (emailOk && passwordOk) {

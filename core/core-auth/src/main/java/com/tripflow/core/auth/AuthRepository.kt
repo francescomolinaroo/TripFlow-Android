@@ -1,15 +1,23 @@
-package com.tripflow.core.auth
+﻿package com.tripflow.core.auth
 
 import android.content.Context
 import android.net.Uri
 import com.tripflow.core.network.ApiClient
 import com.tripflow.core.network.auth.ChangePasswordRequest
+import com.tripflow.core.network.auth.ForgotPasswordRequest
+import com.tripflow.core.network.auth.LoginRequest
+import com.tripflow.core.network.auth.LogoutRequest
 import com.tripflow.core.network.auth.PublicUserResponse
+import com.tripflow.core.network.auth.RefreshTokenRequest
 import com.tripflow.core.network.auth.RegisterRequest
 import com.tripflow.core.network.auth.RegisterResponse
 import com.tripflow.core.network.auth.UpdateProfileRequest
+import com.tripflow.core.network.auth.UserLookupByKeycloakIdsRequest
 import com.tripflow.core.network.auth.UserLookupRequest
 import com.tripflow.core.network.auth.UserResponse
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import okhttp3.MediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -36,14 +44,16 @@ class AuthRepository(context: Context? = null) {
 
     suspend fun login(email: String, password: String): Result<UserResponse> {
         return try {
-            val token = ApiClient.keycloakApi.login(
-                clientId = "tripflow-app",
-                grantType = "password",
-                username = email,
-                password = password
+            val response = ApiClient.authApi.login(
+                LoginRequest(email = email, password = password)
             )
-            tokenStorage?.save(token.accessToken, token.refreshToken)
-            getMe()
+            tokenStorage?.save(response.accessToken, response.refreshToken)
+            val user = response.user
+            if (user != null) {
+                Result.success(user)
+            } else {
+                getMe()
+            }
         } catch (exception: Exception) {
             Result.failure(exception)
         }
@@ -126,12 +136,21 @@ class AuthRepository(context: Context? = null) {
         }
     }
 
+    suspend fun forgotPassword(email: String): Result<Unit> {
+        return try {
+            ApiClient.authApi.forgotPassword(ForgotPasswordRequest(email = email))
+            Result.success(Unit)
+        } catch (exception: Exception) {
+            Result.failure(exception)
+        }
+    }
+
     suspend fun deleteAccount(): Result<Unit> {
         return try {
             val token = tokenStorage?.getAccessToken()
                 ?: return Result.failure(IllegalStateException("Sessione non disponibile"))
             ApiClient.authApi.deleteAccount("Bearer $token")
-            tokenStorage.clear()
+            logout()
             Result.success(Unit)
         } catch (exception: Exception) {
             Result.failure(exception)
@@ -141,12 +160,10 @@ class AuthRepository(context: Context? = null) {
     suspend fun refreshToken(): Boolean {
         return try {
             val refreshToken = tokenStorage?.getRefreshToken() ?: return false
-            val token = ApiClient.keycloakApi.refresh(
-                clientId = "tripflow-app",
-                grantType = "refresh_token",
-                refreshToken = refreshToken
+            val response = ApiClient.authApi.refresh(
+                RefreshTokenRequest(refreshToken = refreshToken)
             )
-            tokenStorage.save(token.accessToken, token.refreshToken ?: refreshToken)
+            tokenStorage.save(response.accessToken, response.refreshToken)
             true
         } catch (exception: Exception) {
             false
@@ -179,8 +196,32 @@ class AuthRepository(context: Context? = null) {
         }
     }
 
+    suspend fun lookupUsersByKeycloakIds(keycloakIds: List<String>): Result<List<PublicUserResponse>> {
+        return try {
+            val token = tokenStorage?.getAccessToken()
+                ?: return Result.failure(IllegalStateException("Sessione non disponibile"))
+            Result.success(
+                ApiClient.authApi.lookupUsersByKeycloakIds(
+                    "Bearer $token",
+                    UserLookupByKeycloakIdsRequest(keycloakIds)
+                )
+            )
+        } catch (exception: Exception) {
+            Result.failure(exception)
+        }
+    }
+
     fun logout() {
+        val refreshToken = tokenStorage?.getRefreshToken()
         tokenStorage?.clear()
+        if (!refreshToken.isNullOrBlank()) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    ApiClient.authApi.logout(LogoutRequest(refreshToken))
+                } catch (_: Exception) {
+                    // Revoca asincrona best-effort
+                }
+            }
+        }
     }
 }
-

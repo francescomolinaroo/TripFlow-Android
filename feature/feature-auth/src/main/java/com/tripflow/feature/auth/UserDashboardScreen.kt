@@ -1,21 +1,22 @@
-package com.tripflow.feature.auth
+﻿package com.tripflow.feature.auth
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,21 +29,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.tripflow.core.auth.AuthRepository
 import com.tripflow.core.model.UiState
 import com.tripflow.core.network.auth.UserResponse
 import com.tripflow.core.ui.component.DangerButton
-import com.tripflow.core.ui.component.SecondaryButton
 import com.tripflow.core.ui.component.Status
 import com.tripflow.core.ui.component.StatusChip
 import com.tripflow.core.ui.component.UserBadge
 import com.tripflow.core.ui.theme.Dimens
 import com.tripflow.core.ui.theme.TripFlowColors
 import com.tripflow.core.ui.theme.TripFlowTheme
-import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun UserDashboardScreen(
@@ -52,7 +52,9 @@ fun UserDashboardScreen(
     onSessionExpired: () -> Unit = {},
     onEditProfileClick: (UserResponse) -> Unit = {},
     onBookingsClick: () -> Unit = {},
-    onReviewsClick: () -> Unit = {}
+    onReviewsClick: () -> Unit = {},
+    onMyTripsClick: () -> Unit = {},
+    onReceivedBookingsClick: () -> Unit = {}
 ) {
     var profileState by remember { mutableStateOf<UiState<UserResponse>>(UiState.Loading) }
 
@@ -122,9 +124,8 @@ fun UserDashboardScreen(
                         color = TripFlowColors.TextSecondary
                     )
                     if (role == DashboardRole.ORGANIZER) {
-                        ProfileAction(icon = Icons.Default.CreditCard, title = "I miei viaggi (demo)", onClick = {})
-                        ProfileAction(icon = Icons.Default.Edit, title = "Gestisci attivitÃ  (demo)", onClick = {})
-                        ProfileAction(icon = Icons.Default.Star, title = "Prenotazioni ricevute (demo)", onClick = {})
+                        ProfileAction(icon = Icons.Default.ListAlt, title = "I miei viaggi e itinerari", onClick = onMyTripsClick)
+                        ProfileAction(icon = Icons.Default.CreditCard, title = "Prenotazioni ricevute", onClick = onReceivedBookingsClick)
                     }
                 }
                 is UiState.Error -> Text(state.message, color = TripFlowColors.Error)

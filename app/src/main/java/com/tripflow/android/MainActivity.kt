@@ -1,4 +1,5 @@
-package com.tripflow.android
+﻿package com.tripflow.android
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -21,6 +22,7 @@ import com.tripflow.feature.booking.ui.BookingListScreen
 import com.tripflow.feature.booking.ui.BookingScreen
 import com.tripflow.feature.booking.ui.BookingUi
 import com.tripflow.feature.auth.EditProfileScreen
+import com.tripflow.feature.auth.ForgotPasswordScreen
 import com.tripflow.feature.auth.LoginScreen
 import com.tripflow.feature.auth.RegisterScreen
 import com.tripflow.feature.auth.UserDashboardScreen
@@ -30,6 +32,7 @@ import com.tripflow.feature.review.ui.ReviewListScreen
 import com.tripflow.feature.review.ui.WriteReviewScreen
 import com.tripflow.feature.catalog.presentation.discover.DiscoverScreen
 import com.tripflow.feature.booking.ui.ReceivedBookingsScreen
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +48,7 @@ class MainActivity : ComponentActivity() {
                 var reviewBooking by remember { mutableStateOf<BookingUi?>(null) }
                 var reviewListTripId by remember { mutableStateOf<String?>(null) }
                 var loginSuccessMessage by remember { mutableStateOf<String?>(null) }
+
                 LaunchedEffect(Unit) {
                     val sessionResult = authRepository.checkSession()
                     if (sessionResult.isSuccess) {
@@ -54,6 +58,7 @@ class MainActivity : ComponentActivity() {
                         currentScreen = "login"
                     }
                 }
+
                 BackHandler(enabled = currentScreen !in setOf("discover", "login", "checking_session")) {
                     currentScreen = when (currentScreen) {
                         "booking_form" -> "trip_detail"
@@ -67,10 +72,12 @@ class MainActivity : ComponentActivity() {
                         "received_bookings" -> "menu"
                         "received_booking_detail" -> "received_bookings"
                         "register" -> "login"
+                        "forgot_password" -> "login"
                         "itinerary_list" -> "dashboard"
                         else -> "discover"
                     }
                 }
+
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     when (currentScreen) {
                         "checking_session" -> Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
@@ -127,12 +134,24 @@ class MainActivity : ComponentActivity() {
                                 loginSuccessMessage = null
                                 currentScreen = "register"
                             },
+                            onForgotPasswordClick = {
+                                loginSuccessMessage = null
+                                currentScreen = "forgot_password"
+                            },
                             onContinueWithoutLogin = {
                                 currentUser = null
                                 loginSuccessMessage = null
                                 currentScreen = "discover"
                             },
                             successMessage = loginSuccessMessage
+                        )
+                        "forgot_password" -> ForgotPasswordScreen(
+                            authRepository = authRepository,
+                            onBackClick = { currentScreen = "login" },
+                            onSuccess = {
+                                loginSuccessMessage = "Se l'indirizzo email esiste, riceverai una mail con le istruzioni"
+                                currentScreen = "login"
+                            }
                         )
                         "discover" -> DiscoverScreen(
                             onTripClick = { tripId ->
@@ -185,7 +204,9 @@ class MainActivity : ComponentActivity() {
                             onReviewsClick = {
                                 reviewListTripId = null
                                 currentScreen = "review_list"
-                            }
+                            },
+                            onMyTripsClick = { currentScreen = "itinerary_list" },
+                            onReceivedBookingsClick = { currentScreen = "received_bookings" }
                         )
                         "edit_profile" -> editingUser?.let { user ->
                             EditProfileScreen(
@@ -227,6 +248,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
 @Composable
 fun MenuScreen(onNavigate: (String) -> Unit) {
     Scaffold { padding ->
@@ -251,6 +273,9 @@ fun MenuScreen(onNavigate: (String) -> Unit) {
             }
             Button(onClick = { onNavigate("login") }, modifier = Modifier.fillMaxWidth()) {
                 Text("Login")
+            }
+            Button(onClick = { onNavigate("forgot_password") }, modifier = Modifier.fillMaxWidth()) {
+                Text("Password dimenticata")
             }
             Button(onClick = { onNavigate("register") }, modifier = Modifier.fillMaxWidth()) {
                 Text("Registrati")

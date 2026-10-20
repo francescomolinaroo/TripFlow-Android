@@ -1,4 +1,4 @@
-package com.tripflow.core.ui.component
+﻿package com.tripflow.core.ui.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -63,6 +63,8 @@ fun Avatar(
         imageUrl?.let {
             if (it.contains("localhost")) {
                 it.replace("localhost", "10.0.2.2")
+            } else if (it.startsWith("/user-auth-service")) {
+                "http://10.0.2.2:8080$it"
             } else if (it.startsWith("/")) {
                 "http://10.0.2.2:8080/user-auth-service$it"
             } else {

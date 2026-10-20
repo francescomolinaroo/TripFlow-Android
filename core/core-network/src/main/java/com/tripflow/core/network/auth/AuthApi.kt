@@ -1,4 +1,4 @@
-package com.tripflow.core.network.auth
+﻿package com.tripflow.core.network.auth
 
 import okhttp3.MultipartBody
 import retrofit2.http.Body
@@ -14,6 +14,18 @@ import retrofit2.http.Part
 interface AuthApi {
     @POST("user-auth-service/api/auth/register")
     suspend fun register(@Body request: RegisterRequest): RegisterResponse
+
+    @POST("user-auth-service/api/auth/login")
+    suspend fun login(@Body request: LoginRequest): LoginResponse
+
+    @POST("user-auth-service/api/auth/refresh")
+    suspend fun refresh(@Body request: RefreshTokenRequest): TokenRefreshResponse
+
+    @POST("user-auth-service/api/auth/logout")
+    suspend fun logout(@Body request: LogoutRequest)
+
+    @POST("user-auth-service/api/auth/forgot-password")
+    suspend fun forgotPassword(@Body request: ForgotPasswordRequest)
 
     @GET("user-auth-service/api/auth/me")
     suspend fun getMe(@Header("Authorization") authorization: String): UserResponse
@@ -45,6 +57,12 @@ interface AuthApi {
         @Body request: UserLookupRequest
     ): List<PublicUserResponse>
 
+    @POST("user-auth-service/api/auth/users/lookup-by-ids")
+    suspend fun lookupUsersByKeycloakIds(
+        @Header("Authorization") authorization: String,
+        @Body request: UserLookupByKeycloakIdsRequest
+    ): List<PublicUserResponse>
+
     @Multipart
     @POST("user-auth-service/api/auth/me/avatar")
     suspend fun uploadAvatar(
@@ -52,4 +70,3 @@ interface AuthApi {
         @Part file: MultipartBody.Part
     ): Map<String, String>
 }
-
