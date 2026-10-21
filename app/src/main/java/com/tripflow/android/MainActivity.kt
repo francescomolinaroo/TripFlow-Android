@@ -1,4 +1,4 @@
-﻿package com.tripflow.android
+package com.tripflow.android
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -31,6 +31,7 @@ import com.tripflow.feature.itinerary.ui.myitineraries.MyItinerariesScreen
 import com.tripflow.feature.review.ui.ReviewListScreen
 import com.tripflow.feature.review.ui.WriteReviewScreen
 import com.tripflow.feature.catalog.presentation.discover.DiscoverScreen
+import com.tripflow.feature.catalog.presentation.create.CreateTripScreen
 import com.tripflow.feature.booking.ui.ReceivedBookingsScreen
 
 class MainActivity : ComponentActivity() {
@@ -71,6 +72,7 @@ class MainActivity : ComponentActivity() {
                         "write_review" -> "booking_list"
                         "received_bookings" -> "menu"
                         "received_booking_detail" -> "received_bookings"
+                        "create_trip" -> "dashboard"
                         "register" -> "login"
                         "forgot_password" -> "login"
                         "itinerary_list" -> "dashboard"
@@ -121,6 +123,10 @@ class MainActivity : ComponentActivity() {
                             prenotazioneId = selectedBookingId,
                             vistaOrganizzatore = true,
                             onBack = { currentScreen = "received_bookings" }
+                        )
+                        "create_trip" -> CreateTripScreen(
+                            onBack = { currentScreen = "dashboard" },
+                            onCreated = { currentScreen = "discover" }
                         )
                         "itinerary_list" -> MyItinerariesScreen(onCreateNewClick = { /* TODO */ })
                         "login" -> LoginScreen(
@@ -206,7 +212,8 @@ class MainActivity : ComponentActivity() {
                                 currentScreen = "review_list"
                             },
                             onMyTripsClick = { currentScreen = "itinerary_list" },
-                            onReceivedBookingsClick = { currentScreen = "received_bookings" }
+                            onReceivedBookingsClick = { currentScreen = "received_bookings" },
+                            onCreateTripClick = { currentScreen = "create_trip" }
                         )
                         "edit_profile" -> editingUser?.let { user ->
                             EditProfileScreen(

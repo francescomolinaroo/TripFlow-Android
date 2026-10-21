@@ -1,4 +1,4 @@
-﻿package com.tripflow.feature.auth
+package com.tripflow.feature.auth
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ListAlt
@@ -54,7 +55,8 @@ fun UserDashboardScreen(
     onBookingsClick: () -> Unit = {},
     onReviewsClick: () -> Unit = {},
     onMyTripsClick: () -> Unit = {},
-    onReceivedBookingsClick: () -> Unit = {}
+    onReceivedBookingsClick: () -> Unit = {},
+    onCreateTripClick: () -> Unit = {}
 ) {
     var profileState by remember { mutableStateOf<UiState<UserResponse>>(UiState.Loading) }
 
@@ -124,6 +126,7 @@ fun UserDashboardScreen(
                         color = TripFlowColors.TextSecondary
                     )
                     if (role == DashboardRole.ORGANIZER) {
+                        ProfileAction(icon = Icons.Default.AddCircle, title = "Crea nuovo viaggio", onClick = onCreateTripClick)
                         ProfileAction(icon = Icons.Default.ListAlt, title = "I miei viaggi e itinerari", onClick = onMyTripsClick)
                         ProfileAction(icon = Icons.Default.CreditCard, title = "Prenotazioni ricevute", onClick = onReceivedBookingsClick)
                     }
