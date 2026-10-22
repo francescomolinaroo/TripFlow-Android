@@ -2,6 +2,7 @@ package com.tripflow.feature.catalog.presentation.detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tripflow.core.auth.AuthRepository
 import com.tripflow.core.model.UiState
 import com.tripflow.core.network.catalog.dto.TripResponseDTO
 import com.tripflow.core.network.review.dto.ReviewResponseDTO
@@ -15,12 +16,14 @@ import kotlinx.coroutines.launch
 
 data class TripDetailData(
     val trip: TripResponseDTO,
-    val reviews: List<ReviewResponseDTO>
+    val reviews: List<ReviewResponseDTO>,
+    val organizerName: String
 )
 
 class TripDetailViewModel(
     private val catalogRepository: CatalogRepository,
-    private val reviewRepository: ReviewRepository
+    private val reviewRepository: ReviewRepository,
+    private val authRepository: AuthRepository = AuthRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState<TripDetailData>>(UiState.Loading)
@@ -39,7 +42,12 @@ class TripDetailViewModel(
             tripResult.fold(
                 onSuccess = { trip ->
                     val reviews = reviewsResult.getOrDefault(emptyList())
-                    _uiState.value = UiState.Success(TripDetailData(trip, reviews))
+                    val organizerName = authRepository
+                        .getPublicUserByKeycloakId(trip.organizerId)
+                        .getOrNull()
+                        ?.let { "${it.firstName} ${it.lastName}" }
+                        ?: "Organizzatore"
+                    _uiState.value = UiState.Success(TripDetailData(trip, reviews, organizerName))
                 },
                 onFailure = {
                     _uiState.value = UiState.Error("impossibile caricare i dettagli del viaggio")

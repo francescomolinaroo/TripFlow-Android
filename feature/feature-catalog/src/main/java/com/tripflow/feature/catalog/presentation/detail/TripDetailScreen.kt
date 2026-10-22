@@ -268,15 +268,20 @@ private fun TripDetailData.toUiModel(): TripDetailUiModel {
     val end = runCatching { LocalDate.parse(t.endDate) }.getOrNull()
     val days = if (start != null && end != null) ChronoUnit.DAYS.between(start, end) else 0
 
+    val avgRating = if (this.reviews.isNotEmpty())
+        this.reviews.map { it.rating }.average()
+    else 0.0
+    val avgRatingStr = "%.1f".format(avgRating)
+
     return TripDetailUiModel(
         title = t.name,
         destination = t.destination,
-        ratingValue = "4.8", // calcolare media dalle recensioni
-        ratingString = "4.8 (${this.reviews.size})",
+        ratingValue = avgRatingStr,
+        ratingString = "$avgRatingStr (${this.reviews.size})",
         dateString = if (start != null && end != null) Formatters.dateRange(start, end) else "",
         durationString = "$days giorni",
         spotsString = "${t.availableSpots} posti",
-        organizerName = "Organizzatore ${t.organizerId.take(4)}",
+        organizerName = this.organizerName,
 
         description = t.description ?: "Nessuna descrizione disponibile per questo viaggio.",
 
