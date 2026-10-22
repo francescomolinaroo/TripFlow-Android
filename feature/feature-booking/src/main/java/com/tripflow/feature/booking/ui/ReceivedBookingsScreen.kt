@@ -52,7 +52,7 @@ private val filtriStato = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReceivedBookingsScreen(
-    onBack: () -> Unit = {},
+    onBack: (() -> Unit)? = null,
     onBookingClick: (String) -> Unit = {},
     viewModel: ReceivedBookingsViewModel = viewModel()
 ) {
@@ -67,8 +67,10 @@ fun ReceivedBookingsScreen(
             TopAppBar(
                 title = { Text("Prenotazioni ricevute", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
