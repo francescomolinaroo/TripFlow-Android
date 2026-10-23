@@ -3,6 +3,7 @@
 import com.tripflow.core.model.UiState
 import com.tripflow.core.network.ApiClient
 import com.tripflow.feature.booking.api.BookingApi
+import com.tripflow.feature.booking.model.AvviaPagamentoRequest
 import com.tripflow.feature.booking.model.PagamentoIntentResponse
 import com.tripflow.feature.booking.model.PagamentoResponse
 import com.tripflow.feature.booking.model.PrenotazioneAttivitaRequest
@@ -43,8 +44,8 @@ class BookingRepositoryImpl(
     override suspend fun rimuoviAttivita(prenotazioneId: String, attivitaId: String): UiState<PrenotazioneResponse> =
         call { api.rimuoviAttivita(prenotazioneId, attivitaId) }
 
-    override suspend fun avviaPagamento(prenotazioneId: String): UiState<PagamentoIntentResponse> =
-        call { api.avviaPagamento(prenotazioneId) }
+    override suspend fun avviaPagamento(prenotazioneId: String, codiceSconto: String?): UiState<PagamentoIntentResponse> =
+        call { api.avviaPagamento(prenotazioneId, AvviaPagamentoRequest(codiceSconto)) }
 
     override suspend fun trovaPagamento(prenotazioneId: String): UiState<PagamentoResponse> =
         call { api.trovaPagamento(prenotazioneId) }

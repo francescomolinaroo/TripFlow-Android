@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -32,7 +33,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -42,6 +42,7 @@ import com.tripflow.core.ui.component.PrimaryButton
 import com.tripflow.core.ui.component.StateHost
 import com.tripflow.core.ui.component.Status
 import com.tripflow.core.ui.component.StatusChip
+import com.tripflow.core.ui.component.TripFlowTextField
 import com.tripflow.core.ui.theme.Dimens
 import com.tripflow.core.ui.theme.TripFlowColors
 import com.tripflow.core.ui.theme.TripFlowTheme
@@ -136,6 +137,7 @@ fun BookingDetailScreen(
                     booking = booking,
                     isPaying = uiState.isPaying,
                     isCancelling = uiState.isCancelling,
+                    isApplyingCode = uiState.isApplyingCode,
                     error = uiState.actionError,
                     onPayClick = viewModel::onPayClick,
                     onCancelClick = viewModel::onCancelClick
@@ -211,9 +213,28 @@ fun BookingDetailScreen(
                     }
                 }
 
+                if (booking.canPay) {
+                    Section(title = "CODICE SCONTO") {
+                        DiscountCodeField(
+                            appliedCode = booking.discountCode,
+                            value = uiState.discountCodeInput,
+                            error = uiState.discountCodeError,
+                            isApplying = uiState.isApplyingCode,
+                            enabled = !uiState.isPaying && !uiState.isCancelling,
+                            onValueChange = viewModel::onDiscountCodeChange,
+                            onApply = viewModel::onApplyDiscountCode,
+                            onRemove = viewModel::onRemoveDiscountCode
+                        )
+                    }
+                }
+
                 Section(title = "RIEPILOGO") {
                     SummaryRow("Prezzo viaggio a persona", booking.unitPrice)
                     SummaryRow("Partecipanti", booking.participants.toString())
+                    if (booking.discountCode != null && booking.subtotalPrice != null && booking.discountAmount != null) {
+                        SummaryRow("Subtotale", booking.subtotalPrice)
+                        SummaryRow("Sconto ${booking.discountCode}", booking.discountAmount)
+                    }
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = Dimens.gapL),
                         color = TripFlowColors.Border
@@ -222,8 +243,8 @@ fun BookingDetailScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Totale", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(booking.totalPrice, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Totale", style = MaterialTheme.typography.titleLarge)
+                        Text(booking.totalPrice, style = MaterialTheme.typography.titleLarge)
                     }
                 }
 
@@ -234,10 +255,64 @@ fun BookingDetailScreen(
 }
 
 @Composable
+private fun DiscountCodeField(
+    appliedCode: String?,
+    value: String,
+    error: String?,
+    isApplying: Boolean,
+    enabled: Boolean,
+    onValueChange: (String) -> Unit,
+    onApply: () -> Unit,
+    onRemove: () -> Unit
+) {
+    if (appliedCode != null) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimens.gapM),
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = TripFlowColors.Success)
+                Text(
+                    "Codice $appliedCode applicato",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TripFlowColors.Success
+                )
+            }
+            TextButton(onClick = onRemove, enabled = enabled && !isApplying) {
+                Text(if (isApplying) "Rimozione..." else "Rimuovi")
+            }
+        }
+        if (error != null) {
+            Text(error, style = MaterialTheme.typography.bodySmall, color = TripFlowColors.Error)
+        }
+    } else {
+        TripFlowTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = "Hai un codice sconto?",
+            placeholder = "Es. CODICE01",
+            error = error,
+            enabled = enabled && !isApplying,
+            trailing = {
+                TextButton(onClick = onApply, enabled = enabled && !isApplying && value.isNotBlank()) {
+                    Text(if (isApplying) "Verifica..." else "Applica")
+                }
+            }
+        )
+    }
+}
+
+@Composable
 private fun DetailActions(
     booking: BookingDetailUi,
     isPaying: Boolean,
     isCancelling: Boolean,
+    isApplyingCode: Boolean,
     error: String?,
     onPayClick: () -> Unit,
     onCancelClick: () -> Unit
@@ -261,7 +336,7 @@ private fun DetailActions(
                     text = if (isPaying) "Pagamento in corso..." else "Paga ${booking.totalPrice}",
                     onClick = onPayClick,
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !isPaying && !isCancelling
+                    enabled = !isPaying && !isCancelling && !isApplyingCode
                 )
             }
             if (booking.canCancel) {

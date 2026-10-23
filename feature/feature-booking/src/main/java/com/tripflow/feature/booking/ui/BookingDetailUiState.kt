@@ -9,7 +9,10 @@ data class BookingDetailUiState(
     val isCancelling: Boolean = false,
     val showCancelDialog: Boolean = false,
     val actionError: String? = null,
-    val paymentSheetRequest: PaymentSheetRequest? = null
+    val paymentSheetRequest: PaymentSheetRequest? = null,
+    val discountCodeInput: String = "",
+    val isApplyingCode: Boolean = false,
+    val discountCodeError: String? = null
 )
 
 data class PaymentSheetRequest(

@@ -6,5 +6,7 @@ data class PagamentoIntentResponse(
     val pagamentoId: String,
     val clientSecret: String,
     val importo: BigDecimal,
-    val publishableKey: String? = null
+    val publishableKey: String? = null,
+    val importoOriginale: BigDecimal? = null,
+    val codiceSconto: String? = null
 )

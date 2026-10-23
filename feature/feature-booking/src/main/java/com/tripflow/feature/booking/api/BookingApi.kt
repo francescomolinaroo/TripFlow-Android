@@ -1,5 +1,6 @@
 package com.tripflow.feature.booking.api
 
+import com.tripflow.feature.booking.model.AvviaPagamentoRequest
 import com.tripflow.feature.booking.model.PagamentoIntentResponse
 import com.tripflow.feature.booking.model.PagamentoResponse
 import com.tripflow.feature.booking.model.PrenotazioneAttivitaRequest
@@ -38,7 +39,10 @@ interface BookingApi {
     suspend fun rimuoviAttivita(@Path("id") id: String, @Path("attivitaId") attivitaId: String): PrenotazioneResponse
 
     @POST("booking-service/api/pagamenti/{prenotazioneId}")
-    suspend fun avviaPagamento(@Path("prenotazioneId") id: String): PagamentoIntentResponse
+    suspend fun avviaPagamento(
+        @Path("prenotazioneId") id: String,
+        @Body request: AvviaPagamentoRequest
+    ): PagamentoIntentResponse
 
     @GET("booking-service/api/pagamenti/{prenotazioneId}")
     suspend fun trovaPagamento(@Path("prenotazioneId") id: String): PagamentoResponse

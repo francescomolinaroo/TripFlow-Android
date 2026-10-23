@@ -81,6 +81,19 @@ fun PrenotazioneResponse.toDetailUi(vistaOrganizzatore: Boolean = false): Bookin
         canCancel = false
         travelerName = nomeViaggiatore()
     }
+    var totalPrice = Formatters.money(prezzoTotale)
+    var discountCode: String? = null
+    var subtotalPrice: String? = null
+    var discountAmount: String? = null
+    val importoOriginale = pagamento?.importoOriginale
+    if (pagamento != null && pagamento.codiceSconto != null && importoOriginale != null
+        && importoOriginale.compareTo(prezzoTotale) == 0
+    ) {
+        discountCode = pagamento.codiceSconto
+        subtotalPrice = Formatters.money(importoOriginale)
+        discountAmount = "− " + Formatters.money(importoOriginale.subtract(pagamento.importo))
+        totalPrice = Formatters.money(pagamento.importo)
+    }
     return BookingDetailUi(
         id = id,
         trip = TripSummaryUi(
@@ -92,14 +105,17 @@ fun PrenotazioneResponse.toDetailUi(vistaOrganizzatore: Boolean = false): Bookin
         status = stato.name,
         participants = numeroPartecipanti,
         unitPrice = Formatters.money(prezzoUnitarioAlMomentoDelBooking),
-        totalPrice = Formatters.money(prezzoTotale),
+        totalPrice = totalPrice,
         activities = attivitaSelezionate.orEmpty().map { it.toUi() },
         notes = note?.takeIf { it.isNotBlank() },
         paymentStatus = pagamento?.stato?.name,
         paymentDetail = pagamento?.toDetail(),
         canPay = canPay,
         canCancel = canCancel,
-        travelerName = travelerName
+        travelerName = travelerName,
+        discountCode = discountCode,
+        subtotalPrice = subtotalPrice,
+        discountAmount = discountAmount
     )
 }
 

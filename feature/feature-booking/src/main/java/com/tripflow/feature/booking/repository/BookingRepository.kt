@@ -24,7 +24,7 @@ interface BookingRepository {
 
     suspend fun rimuoviAttivita(prenotazioneId: String, attivitaId: String): UiState<PrenotazioneResponse>
 
-    suspend fun avviaPagamento(prenotazioneId: String): UiState<PagamentoIntentResponse>
+    suspend fun avviaPagamento(prenotazioneId: String, codiceSconto: String? = null): UiState<PagamentoIntentResponse>
 
     suspend fun trovaPagamento(prenotazioneId: String): UiState<PagamentoResponse>
 }

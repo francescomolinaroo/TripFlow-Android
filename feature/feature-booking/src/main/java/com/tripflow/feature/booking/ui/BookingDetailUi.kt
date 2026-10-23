@@ -13,5 +13,8 @@ data class BookingDetailUi(
     val paymentDetail: String?,
     val canPay: Boolean,
     val canCancel: Boolean,
-    val travelerName: String? = null
+    val travelerName: String? = null,
+    val discountCode: String? = null,
+    val subtotalPrice: String? = null,
+    val discountAmount: String? = null
 )

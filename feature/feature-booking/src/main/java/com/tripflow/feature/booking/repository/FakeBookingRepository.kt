@@ -12,6 +12,7 @@ import com.tripflow.feature.booking.model.StatoPagamento
 import com.tripflow.feature.booking.model.StatoPrenotazione
 import kotlinx.coroutines.delay
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -190,24 +191,39 @@ class FakeBookingRepository(
         )
     }
 
-    override suspend fun avviaPagamento(prenotazioneId: String): UiState<PagamentoIntentResponse> = simula {
+    override suspend fun avviaPagamento(prenotazioneId: String, codiceSconto: String?): UiState<PagamentoIntentResponse> = simula {
         val p = trova(prenotazioneId) ?: return@simula nonTrovata(prenotazioneId)
         if (p.stato != StatoPrenotazione.IN_ATTESA) {
             return@simula errore("Impossibile avviare pagamento: prenotazione in stato ${p.stato}")
         }
-        if (p.infoPagamento != null && p.infoPagamento.stato != StatoPagamento.FALLITO) {
+        val esistente = p.infoPagamento
+        if (esistente != null && esistente.stato != StatoPagamento.FALLITO && esistente.stato != StatoPagamento.IN_ATTESA) {
             return@simula errore("Esiste già un pagamento per la prenotazione $prenotazioneId")
         }
+        var importo = p.prezzoTotale
+        var importoOriginale: BigDecimal? = null
+        var codiceApplicato: String? = null
+        if (!codiceSconto.isNullOrBlank()) {
+            if (!codiceSconto.trim().equals(CODICE_SCONTO_FAKE, ignoreCase = true)) {
+                return@simula errore("Codice sconto non valido o non più attivo")
+            }
+            val sconto = p.prezzoTotale.multiply(BigDecimal(15)).divide(BigDecimal(100), 2, RoundingMode.HALF_UP)
+            importo = p.prezzoTotale.subtract(sconto)
+            importoOriginale = p.prezzoTotale
+            codiceApplicato = CODICE_SCONTO_FAKE
+        }
         val pagamento = PagamentoResponse(
-            id = UUID.randomUUID().toString(),
-            importo = p.prezzoTotale,
+            id = esistente?.id ?: UUID.randomUUID().toString(),
+            importo = importo,
             metodo = null,
             stato = StatoPagamento.IN_ATTESA,
             ultimeQuattroCifre = null,
             brandCarta = null,
             dataPagamento = null,
             createdAt = LocalDateTime.now().toString(),
-            stripePaymentIntentId = "pi_fake_${UUID.randomUUID().toString().take(8)}"
+            stripePaymentIntentId = "pi_fake_${UUID.randomUUID().toString().take(8)}",
+            importoOriginale = importoOriginale,
+            codiceSconto = codiceApplicato
         )
         salva(p.copy(infoPagamento = pagamento))
         ritardoWebhookMs?.let { webhookInArrivo[prenotazioneId] = System.currentTimeMillis() + it }
@@ -215,7 +231,9 @@ class FakeBookingRepository(
             PagamentoIntentResponse(
                 pagamentoId = pagamento.id,
                 clientSecret = "${pagamento.stripePaymentIntentId}_secret_fake",
-                importo = pagamento.importo
+                importo = pagamento.importo,
+                importoOriginale = importoOriginale,
+                codiceSconto = codiceApplicato
             )
         )
     }
@@ -364,6 +382,8 @@ class FakeBookingRepository(
     )
 
     companion object {
+        const val CODICE_SCONTO_FAKE = "BDAY15"
+
         const val VIAGGIO_AMALFI = "a1000000-0000-0000-0000-000000000001"
         const val VIAGGIO_FUNES = "a1000000-0000-0000-0000-000000000002"
         const val VIAGGIO_EOLIE = "a1000000-0000-0000-0000-000000000003"

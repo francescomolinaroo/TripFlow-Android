@@ -29,6 +29,7 @@ class BookingDetailViewModel(
     private var loadJob: Job? = null
     private var countdownJob: Job? = null
     private var paymentJob: Job? = null
+    private var codicePrecompilato = false
 
     fun loadBooking() {
         if (prenotazioneId == null) {
@@ -50,12 +51,62 @@ class BookingDetailViewModel(
         }
     }
 
+    fun onDiscountCodeChange(value: String) {
+        _uiState.update { it.copy(discountCodeInput = value, discountCodeError = null) }
+    }
+
+    fun onApplyDiscountCode() {
+        val codice = _uiState.value.discountCodeInput.trim()
+        if (codice.isEmpty()) {
+            _uiState.update { it.copy(discountCodeError = "Inserisci un codice sconto") }
+            return
+        }
+        aggiornaCodiceSconto(codice)
+    }
+
+    fun onRemoveDiscountCode() {
+        aggiornaCodiceSconto(null)
+    }
+
+    private fun aggiornaCodiceSconto(codice: String?) {
+        val stato = _uiState.value
+        if (prenotazioneId == null || stato.isApplyingCode || stato.isPaying) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isApplyingCode = true, discountCodeError = null, actionError = null) }
+            when (val result = repository.avviaPagamento(prenotazioneId, codice)) {
+                is UiState.Success -> {
+                    var nuovoInput = ""
+                    val codiceApplicato = result.data.codiceSconto
+                    if (codiceApplicato != null) {
+                        nuovoInput = codiceApplicato
+                    }
+                    _uiState.update { it.copy(discountCodeInput = nuovoInput) }
+                    val aggiornata = repository.trovaPrenotazione(prenotazioneId)
+                    if (aggiornata is UiState.Success) {
+                        apply(aggiornata.data)
+                    }
+                }
+                is UiState.Error -> _uiState.update { it.copy(discountCodeError = result.message) }
+                else -> Unit
+            }
+            _uiState.update { it.copy(isApplyingCode = false) }
+        }
+    }
+
+    private fun codiceDaInviare(): String? {
+        val codice = _uiState.value.discountCodeInput.trim()
+        if (codice.isEmpty()) {
+            return null
+        }
+        return codice
+    }
+
     fun onPayClick() {
-        if (prenotazioneId == null || _uiState.value.isPaying) return
+        if (prenotazioneId == null || _uiState.value.isPaying || _uiState.value.isApplyingCode) return
         paymentJob?.cancel()
         paymentJob = viewModelScope.launch {
             _uiState.update { it.copy(isPaying = true, actionError = null) }
-            when (val result = repository.avviaPagamento(prenotazioneId)) {
+            when (val result = repository.avviaPagamento(prenotazioneId, codiceDaInviare())) {
                 is UiState.Success -> {
                     val publishableKey = result.data.publishableKey
                     if (publishableKey.isNullOrBlank()) {
@@ -152,8 +203,15 @@ class BookingDetailViewModel(
         if (vistaOrganizzatore) {
             secondi = null
         }
+        val ui = prenotazione.toDetailUi(vistaOrganizzatore)
         _uiState.update {
-            it.copy(booking = UiState.Success(prenotazione.toDetailUi(vistaOrganizzatore)), secondsLeft = secondi)
+            it.copy(booking = UiState.Success(ui), secondsLeft = secondi)
+        }
+        if (!codicePrecompilato && ui.discountCode != null) {
+            codicePrecompilato = true
+            if (_uiState.value.discountCodeInput.isBlank()) {
+                _uiState.update { it.copy(discountCodeInput = ui.discountCode) }
+            }
         }
         startCountdown(secondi)
     }

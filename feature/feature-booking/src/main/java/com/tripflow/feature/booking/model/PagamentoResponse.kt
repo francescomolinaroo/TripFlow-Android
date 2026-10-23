@@ -11,5 +11,7 @@ data class PagamentoResponse(
     val brandCarta: String?,
     val dataPagamento: String?,
     val createdAt: String?,
-    val stripePaymentIntentId: String?
+    val stripePaymentIntentId: String?,
+    val importoOriginale: BigDecimal? = null,
+    val codiceSconto: String? = null
 )
