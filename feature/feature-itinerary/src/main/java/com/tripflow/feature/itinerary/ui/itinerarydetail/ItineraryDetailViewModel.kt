@@ -35,6 +35,10 @@ class ItineraryDetailViewModel @Inject constructor(
         itineraryId = id
         viewModelScope.launch {
             _uiState.value = UiState.Loading
+            if (id.isBlank()) {
+                _uiState.value = UiState.Error("Identificativo itinerario non valido")
+                return@launch
+            }
             _uiState.value = when (val result = repository.getItineraryDetail(id)) {
                 is UiState.Success -> UiState.Success(result.data.sortedByOrder())
                 else -> result
@@ -53,6 +57,16 @@ class ItineraryDetailViewModel @Inject constructor(
                     message = null,
                     errorMessage = null,
                 )
+            }
+
+            if (id.isBlank() || stageId.isBlank()) {
+                _actionState.update {
+                    it.copy(
+                        deletingStageId = null,
+                        errorMessage = "Identificativo non valido",
+                    )
+                }
+                return@launch
             }
 
             when (val result = repository.deleteStage(id, stageId)) {
@@ -95,7 +109,7 @@ class ItineraryDetailViewModel @Inject constructor(
         val current = _uiState.value
         if (current !is UiState.Success) return
 
-        val remainingStages = current.data.stages.filterNot { it.id == stageId }
+        val remainingStages = current.data.stages.filterNot { it.id.toString() == stageId }
         _uiState.value = UiState.Success(
             current.data.copy(
                 stages = remainingStages,

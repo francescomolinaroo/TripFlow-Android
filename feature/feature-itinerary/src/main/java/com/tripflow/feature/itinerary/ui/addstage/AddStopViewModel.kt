@@ -70,6 +70,17 @@ class AddStopViewModel @Inject constructor(
             )
         }
 
+        if (itineraryId.isBlank()) {
+            _uiState.update {
+                it.copy(
+                    isLoadingContext = false,
+                    contextError = "Identificativo itinerario non valido",
+                    contextErrorRetryable = false,
+                )
+            }
+            return
+        }
+
         viewModelScope.launch {
             when (val result = repository.getItineraryDetail(itineraryId)) {
                 is UiState.Success -> {
@@ -285,13 +296,20 @@ class AddStopViewModel @Inject constructor(
             StopType.TRIP,
             StopType.ACTIVITY -> StageSource.FromCatalog(
                 catalogItemId = requireNotNull(current.selectedCatalogItem).id,
-                stopType = current.stopType,
+                stopType = current.stopType
             )
         }
         val dayNumber = current.itineraryStartDate
             ?.let { ChronoUnit.DAYS.between(it, date).toInt() + 1 }
             ?.coerceAtLeast(1)
             ?: 1
+
+        if (current.itineraryId.isBlank()) {
+            _uiState.update {
+                it.copy(errorMessage = "Identificativo itinerario non valido")
+            }
+            return
+        }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true, errorMessage = null) }
@@ -303,7 +321,7 @@ class AddStopViewModel @Inject constructor(
                 endTime = current.endTime,
                 source = source,
                 notes = current.notes.trim().ifBlank { null },
-                orderIndex = current.orderIndex,
+                orderIndex = current.orderIndex
             )
 
             when (val result = repository.addStage(current.itineraryId, request)) {
@@ -324,7 +342,7 @@ class AddStopViewModel @Inject constructor(
                                 isSubmitting = false,
                                 orderIndex = nextOrder,
                                 errorMessage = "La posizione ${current.orderIndex} è già occupata. " +
-                                    "Ho proposto la posizione $nextOrder: riprova.",
+                                        "Ho proposto la posizione $nextOrder: riprova.",
                             )
                         }
                     } else {

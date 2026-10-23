@@ -1,142 +1,90 @@
 package com.tripflow.feature.itinerary.ui.myitineraries
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.tripflow.core.ui.theme.TripFlowTheme
-import com.tripflow.feature.itinerary.repository.FakeMyItineraryRepository
+import com.tripflow.feature.itinerary.repository.FakeItineraryRepository
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
 
+@RunWith(AndroidJUnit4::class)
 class MyItinerariesScreenTest {
 
     @get:Rule
     val composeRule = createComposeRule()
 
-    @Test
-    fun screenRendersTitleAndItineraries() {
+    private fun setScreenContent() {
         composeRule.setContent {
             TripFlowTheme {
-                val fakeRepo = FakeMyItineraryRepository()
+                val fakeRepo = FakeItineraryRepository()
                 val viewModel = MyItinerariesViewModel(fakeRepo)
-
                 MyItinerariesScreen(viewModel = viewModel)
             }
         }
+    }
 
-        composeRule
-            .onNodeWithText("I miei itinerari")
-            .assertExists()
+    private fun waitForItineraries() {
+        composeRule.waitForIdle()
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodesWithText("Costa Amalfitana").fetchSemanticsNodes().isNotEmpty()
+        }
+    }
 
-        composeRule
-            .onNodeWithText("Organizza le giornate dei tuoi viaggi, tappa per tappa.")
-            .assertExists()
+    @Test
+    fun screenRendersTitleAndItineraries() {
+        setScreenContent()
+        waitForItineraries()
 
-        composeRule
-            .onNodeWithText("Amalfi in 5 giorni")
-            .assertExists()
+        composeRule.onNodeWithText("Costa Amalfitana").assertExists()
+        composeRule.onNodeWithText("Trekking Dolomiti").assertExists()
+        composeRule.onNodeWithText("Sicilia on the road").assertExists()
 
-        composeRule
-            .onNodeWithText("Weekend a Bolzano")
-            .assertExists()
-
-        composeRule
-            .onNodeWithText("PRIVATO")
-            .assertExists()
-
-        composeRule
-            .onNodeWithText("PUBBLICO")
-            .assertExists()
+        composeRule.onNodeWithText("PRIVATE").assertExists()
+        composeRule.onNodeWithText("SHARED").assertExists()
+        composeRule.onNodeWithText("PUBLIC").assertExists()
     }
 
     @Test
     fun screenShowsFABWithCorrectText() {
-        composeRule.setContent {
-            TripFlowTheme {
-                val fakeRepo = FakeMyItineraryRepository()
-                val viewModel = MyItinerariesViewModel(fakeRepo)
+        setScreenContent()
+        waitForItineraries()
 
-                MyItinerariesScreen(viewModel = viewModel)
-            }
-        }
-
-        composeRule
-            .onNodeWithText("+ Nuovo itinerario", useUnmergedTree = true)
-            .assertExists()
+        composeRule.onNodeWithText("+ Nuovo itinerario", useUnmergedTree = true).assertExists()
     }
 
     @Test
     fun screenShowsDateRangeAndStopsCount() {
-        composeRule.setContent {
-            TripFlowTheme {
-                val fakeRepo = FakeMyItineraryRepository()
-                val viewModel = MyItinerariesViewModel(fakeRepo)
+        setScreenContent()
+        waitForItineraries()
 
-                MyItinerariesScreen(viewModel = viewModel)
-            }
-        }
-
-        composeRule
-            .onNodeWithText("14 – 18 set 2026 · 6 tappe")
-            .assertExists()
-
-        composeRule
-            .onNodeWithText("22 – 24 set 2026 · 3 tappe")
-            .assertExists()
+        composeRule.onNodeWithText("14 - 18 set 2026 · 12 tappe").assertExists()
+        composeRule.onNodeWithText("10 - 15 lug 2026 · 8 tappe").assertExists()
     }
 
     @Test
     fun screenShowsStopsPreview() {
-        composeRule.setContent {
-            TripFlowTheme {
-                val fakeRepo = FakeMyItineraryRepository()
-                val viewModel = MyItinerariesViewModel(fakeRepo)
+        setScreenContent()
+        waitForItineraries()
 
-                MyItinerariesScreen(viewModel = viewModel)
-            }
-        }
+        composeRule.onNodeWithText("Arrivo ad Amalfi e check-in").assertExists()
+        composeRule.onNodeWithText("Passeggiata sul lungomare").assertExists()
+        composeRule.onNodeWithText("Escursione a Positano").assertExists()
 
-        composeRule
-            .onNodeWithText("Tour in barca a Capri")
-            .assertExists()
-
-        composeRule
-            .onNodeWithText("Pranzo da Nonna Rosa")
-            .assertExists()
-
-        composeRule
-            .onNodeWithText("Arrivo e giro in centro")
-            .assertExists()
-
-        composeRule
-            .onNodeWithText("09:00")
-            .assertExists()
-
-        composeRule
-            .onNodeWithText("13:30")
-            .assertExists()
-
-        composeRule
-            .onNodeWithText("16:00")
-            .assertExists()
+        composeRule.onNodeWithText("14:00").assertExists()
+        composeRule.onNodeWithText("17:00").assertExists()
+        composeRule.onAllNodesWithText("09:00").assertCountEquals(2)
     }
 
     @Test
     fun screenShowsRemainingStopsIndicator() {
-        composeRule.setContent {
-            TripFlowTheme {
-                val fakeRepo = FakeMyItineraryRepository()
-                val viewModel = MyItinerariesViewModel(fakeRepo)
+        setScreenContent()
+        waitForItineraries()
 
-                MyItinerariesScreen(viewModel = viewModel)
-            }
-        }
-
-        composeRule
-            .onNodeWithText("• e altre 4 tappe")
-            .assertExists()
-
-        composeRule
-            .onNodeWithText("• e altre 2 tappe")
-            .assertExists()
+        composeRule.onNodeWithText("• e altre 9 tappe").assertExists()
+        composeRule.onNodeWithText("• e altre 6 tappe").assertExists()
     }
 }

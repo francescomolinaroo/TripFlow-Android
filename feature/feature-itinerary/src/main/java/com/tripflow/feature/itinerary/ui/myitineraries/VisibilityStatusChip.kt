@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,16 +23,33 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tripflow.core.ui.theme.Dimens
 import com.tripflow.core.ui.theme.TripFlowColors
+import com.tripflow.feature.itinerary.model.Visibility
 
 @Composable
 fun VisibilityStatusChip(
-    isPublic: Boolean,
+    visibility: Visibility,
     modifier: Modifier = Modifier
 ) {
-    val label = if (isPublic) "PUBBLICO" else "PRIVATO"
-    val icon = if (isPublic) Icons.Default.Public else Icons.Default.Lock
-    val contentColor = if (isPublic) TripFlowColors.Success else TripFlowColors.TextSecondary
-    val containerColor = if (isPublic) TripFlowColors.SuccessSoft else TripFlowColors.Surface3
+    val label = when (visibility) {
+        Visibility.PUBLIC -> "PUBLIC"
+        Visibility.PRIVATE -> "PRIVATE"
+        Visibility.SHARED -> "SHARED"
+    }
+    val icon = when (visibility) {
+        Visibility.PUBLIC -> Icons.Default.Public
+        Visibility.PRIVATE -> Icons.Default.Lock
+        Visibility.SHARED -> Icons.Default.Share
+    }
+    val contentColor = when (visibility) {
+        Visibility.PUBLIC -> TripFlowColors.Success
+        Visibility.PRIVATE -> TripFlowColors.TextSecondary
+        Visibility.SHARED -> TripFlowColors.Accent
+    }
+    val containerColor = when (visibility) {
+        Visibility.PUBLIC -> TripFlowColors.SuccessSoft
+        Visibility.PRIVATE -> TripFlowColors.Surface3
+        Visibility.SHARED -> TripFlowColors.AccentSoft
+    }
 
     Box(
         contentAlignment = Alignment.Center,

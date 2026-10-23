@@ -37,7 +37,7 @@ fun MyItineraryCard(
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(Dimens.radiusCard)
-    val previewStops = itinerary.stopsPreview.take(2)
+    val previewStops = itinerary.stopsPreview.take(3)
     val remainingStops = itinerary.stopsCount - previewStops.size
 
     Column(
@@ -63,7 +63,7 @@ fun MyItineraryCard(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
-            VisibilityStatusChip(isPublic = itinerary.isPublic)
+            VisibilityStatusChip(visibility = itinerary.visibility)
         }
 
         // Subtitle: Date range + stops count

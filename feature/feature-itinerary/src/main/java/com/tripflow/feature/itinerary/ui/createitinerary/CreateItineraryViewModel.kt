@@ -110,7 +110,7 @@ class CreateItineraryViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isSubmitting = false,
-                            createdItineraryId = result.data.id,
+                            createdItineraryId = result.data.id.toString(),
                         )
                     }
                 }

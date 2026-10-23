@@ -178,7 +178,7 @@ private fun SuccessState(
 @Composable
 fun MyItinerariesScreenPreview() {
     TripFlowTheme {
-        val fakeRepo = com.tripflow.feature.itinerary.repository.FakeMyItineraryRepository()
+        val fakeRepo = com.tripflow.feature.itinerary.repository.FakeItineraryRepository()
         val viewModel = MyItinerariesViewModel(fakeRepo)
 
         MyItinerariesScreen(
