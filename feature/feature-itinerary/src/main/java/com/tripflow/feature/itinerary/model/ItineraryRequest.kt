@@ -5,9 +5,9 @@ data class CreateItineraryRequest(
     val description: String?,
     val startDate: String,
     val endDate: String,
-    val isPublic: Boolean
+    val visibility: Visibility
 )
 
 data class UpdateVisibilityRequest(
-    val isPublic: Boolean
+    val visibility: Visibility
 )

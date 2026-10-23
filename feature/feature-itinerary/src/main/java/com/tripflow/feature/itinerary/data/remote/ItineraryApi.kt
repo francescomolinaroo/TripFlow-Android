@@ -1,93 +1,79 @@
 package com.tripflow.feature.itinerary.data.remote
 
-import com.tripflow.feature.itinerary.data.remote.dto.CatalogItemResponseDto
-import com.tripflow.feature.itinerary.data.remote.dto.CatalogSearchResponseDto
+import com.tripflow.feature.itinerary.data.remote.dto.ActivityResponseDto
+import com.tripflow.feature.itinerary.data.remote.dto.AddStopRequestDto
 import com.tripflow.feature.itinerary.data.remote.dto.CreateItineraryRequestDto
-import com.tripflow.feature.itinerary.data.remote.dto.CreateStageRequestDto
-import com.tripflow.feature.itinerary.data.remote.dto.ItineraryDetailResponseDto
-import com.tripflow.feature.itinerary.data.remote.dto.ItinerarySummaryResponseDto
-import com.tripflow.feature.itinerary.data.remote.dto.StageDetailResponseDto
-import com.tripflow.feature.itinerary.data.remote.dto.UpdateStageRequestDto
+import com.tripflow.feature.itinerary.data.remote.dto.ItineraryResponseDto
+import com.tripflow.feature.itinerary.data.remote.dto.StopResponseDto
+import com.tripflow.feature.itinerary.data.remote.dto.TripResponseDto
+import com.tripflow.feature.itinerary.data.remote.dto.UpdateStopRequestDto
 import com.tripflow.feature.itinerary.data.remote.dto.UpdateVisibilityRequestDto
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
-import retrofit2.http.HEAD
-import retrofit2.http.Header
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
-import java.util.UUID
 
 interface ItineraryApi {
 
     @GET("itinerary-service/api/itineraries")
-    suspend fun getMyItineraries(
-        @Header("Authorization") authorization: String
-    ): List<ItinerarySummaryResponseDto>
+    suspend fun getMyItineraries(): List<ItineraryResponseDto>
 
     @GET("itinerary-service/api/itineraries/{id}")
     suspend fun getItineraryDetail(
-        @Path("id") id: UUID,
-        @Header("Authorization") authorization: String
-    ): ItineraryDetailResponseDto
+        @Path("id") id: String
+    ): ItineraryResponseDto
 
     @POST("itinerary-service/api/itineraries")
     suspend fun createItinerary(
-        @Header("Authorization") authorization: String,
         @Body request: CreateItineraryRequestDto
-    ): ItineraryDetailResponseDto
+    ): ItineraryResponseDto
 
     @DELETE("itinerary-service/api/itineraries/{id}")
     suspend fun deleteItinerary(
-        @Path("id") id: UUID,
-        @Header("Authorization") authorization: String
+        @Path("id") id: String
     )
 
     @PATCH("itinerary-service/api/itineraries/{id}/visibility")
     suspend fun updateVisibility(
-        @Path("id") id: UUID,
-        @Header("Authorization") authorization: String,
+        @Path("id") id: String,
         @Body request: UpdateVisibilityRequestDto
-    ): ItineraryDetailResponseDto
+    ): ItineraryResponseDto
 
-    @POST("itinerary-service/api/itineraries/{itineraryId}/stages")
-    suspend fun addStage(
-        @Path("itineraryId") itineraryId: UUID,
-        @Header("Authorization") authorization: String,
-        @Body request: CreateStageRequestDto
-    ): StageDetailResponseDto
+    @POST("itinerary-service/api/itineraries/{itineraryId}/stops")
+    suspend fun addStop(
+        @Path("itineraryId") itineraryId: String,
+        @Body request: AddStopRequestDto
+    ): StopResponseDto
 
-    @PUT("itinerary-service/api/itineraries/{itineraryId}/stages/{stageId}")
-    suspend fun updateStage(
-        @Path("itineraryId") itineraryId: UUID,
-        @Path("stageId") stageId: UUID,
-        @Header("Authorization") authorization: String,
-        @Body request: UpdateStageRequestDto
-    ): StageDetailResponseDto
+    @PUT("itinerary-service/api/itineraries/{itineraryId}/stops/{stopId}")
+    suspend fun updateStop(
+        @Path("itineraryId") itineraryId: String,
+        @Path("stopId") stopId: String,
+        @Body request: UpdateStopRequestDto
+    ): StopResponseDto
 
-    @DELETE("itinerary-service/api/itineraries/{itineraryId}/stages/{stageId}")
-    suspend fun deleteStage(
-        @Path("itineraryId") itineraryId: UUID,
-        @Path("stageId") stageId: UUID,
-        @Header("Authorization") authorization: String
+    @DELETE("itinerary-service/api/itineraries/{itineraryId}/stops/{stopId}")
+    suspend fun deleteStop(
+        @Path("itineraryId") itineraryId: String,
+        @Path("stopId") stopId: String
     )
 
-    @GET("itinerary-service/api/catalog/search")
+    @GET("catalog-service/api/v1/trips/search")
     suspend fun searchCatalog(
-        @Header("Authorization") authorization: String,
-        @Query("query") query: String? = null,
-        @Query("category") category: String? = null,
-        @Query("location") location: String? = null,
-        @Query("page") page: Int = 0,
-        @Query("size") size: Int = 20
-    ): CatalogSearchResponseDto
+        @Query("destination") destination: String? = null
+    ): List<TripResponseDto>
 
-    @GET("itinerary-service/api/catalog/{id}")
+    @GET("catalog-service/api/v1/activities/search")
+    suspend fun searchActivities(
+        @Query("name") name: String? = null
+    ): List<ActivityResponseDto>
+
+    @GET("catalog-service/api/v1/trips/{id}")
     suspend fun getCatalogItem(
-        @Path("id") id: UUID,
-        @Header("Authorization") authorization: String
-    ): CatalogItemResponseDto
+        @Path("id") id: String
+    ): TripResponseDto
 }

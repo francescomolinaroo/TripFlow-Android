@@ -1,71 +1,40 @@
 package com.tripflow.feature.itinerary.data.remote.dto
 
 import com.google.gson.annotations.SerializedName
-import java.util.UUID
 
-data class ItinerarySummaryResponseDto(
+data class ItineraryResponseDto(
     @SerializedName("id") val id: String,
+    @SerializedName("ownerId") val ownerId: String? = null,
     @SerializedName("title") val title: String,
-    @SerializedName("startDate") val startDate: String,
-    @SerializedName("endDate") val endDate: String,
-    @SerializedName("isPublic") val isPublic: Boolean,
-    @SerializedName("stagesCount") val stagesCount: Int,
-    @SerializedName("previewStages") val previewStages: List<StagePreviewResponseDto>,
-    @SerializedName("createdAt") val createdAt: String,
-    @SerializedName("updatedAt") val updatedAt: String
+    @SerializedName("description") val description: String? = null,
+    @SerializedName("visibility") val visibility: String? = null,
+    @SerializedName("canEdit") val canEdit: Boolean? = null,
+    @SerializedName("startDate") val startDate: String? = null,
+    @SerializedName("endDate") val endDate: String? = null,
+    @SerializedName("createdAt") val createdAt: String? = null,
+    @SerializedName("updatedAt") val updatedAt: String? = null,
+    @SerializedName("stops") val stops: List<StopResponseDto> = emptyList()
 )
 
-data class StagePreviewResponseDto(
+data class StopResponseDto(
     @SerializedName("id") val id: String,
-    @SerializedName("dayNumber") val dayNumber: Int,
-    @SerializedName("title") val title: String,
-    @SerializedName("startTime") val startTime: String,
-    @SerializedName("endTime") val endTime: String,
-    @SerializedName("isFromCatalog") val isFromCatalog: Boolean
+    @SerializedName("stopOrder") val stopOrder: Int? = null,
+    @SerializedName("stopType") val stopType: String? = null,
+    @SerializedName("viaggioId") val viaggioId: String? = null,
+    @SerializedName("attivitaId") val attivitaId: String? = null,
+    @SerializedName("customTitle") val customTitle: String? = null,
+    @SerializedName("customDescription") val customDescription: String? = null,
+    @SerializedName("startDatetime") val startDatetime: String? = null,
+    @SerializedName("endDatetime") val endDatetime: String? = null,
+    @SerializedName("notes") val notes: String? = null
 )
 
-data class ItineraryDetailResponseDto(
+data class TripResponseDto(
     @SerializedName("id") val id: String,
-    @SerializedName("title") val title: String,
-    @SerializedName("description") val description: String?,
-    @SerializedName("startDate") val startDate: String,
-    @SerializedName("endDate") val endDate: String,
-    @SerializedName("isPublic") val isPublic: Boolean,
-    @SerializedName("stages") val stages: List<StageDetailResponseDto>,
-    @SerializedName("totalStages") val totalStages: Int,
-    @SerializedName("createdAt") val createdAt: String,
-    @SerializedName("updatedAt") val updatedAt: String
-)
-
-data class StageDetailResponseDto(
-    @SerializedName("id") val id: String,
-    @SerializedName("dayNumber") val dayNumber: Int,
-    @SerializedName("date") val date: String,
-    @SerializedName("startTime") val startTime: String,
-    @SerializedName("endTime") val endTime: String,
-    @SerializedName("title") val title: String,
-    @SerializedName("description") val description: String?,
-    @SerializedName("location") val location: String?,
-    @SerializedName("isFromCatalog") val isFromCatalog: Boolean,
-    @SerializedName("catalogItemId") val catalogItemId: String?,
-    @SerializedName("notes") val notes: String?,
-    @SerializedName("orderIndex") val orderIndex: Int
-)
-
-data class CatalogItemResponseDto(
-    @SerializedName("id") val id: String,
-    @SerializedName("title") val title: String,
-    @SerializedName("description") val description: String,
-    @SerializedName("location") val location: String,
-    @SerializedName("category") val category: String,
-    @SerializedName("durationMinutes") val durationMinutes: Int,
-    @SerializedName("imageUrl") val imageUrl: String?,
-    @SerializedName("averageRating") val averageRating: Double?
-)
-
-data class CatalogSearchResponseDto(
-    @SerializedName("content") val content: List<CatalogItemResponseDto>,
-    @SerializedName("totalElements") val totalElements: Long,
-    @SerializedName("totalPages") val totalPages: Int,
-    @SerializedName("currentPage") val currentPage: Int
+    @SerializedName("name") val name: String,
+    @SerializedName("destination") val destination: String? = null,
+    @SerializedName("description") val description: String? = null,
+    @SerializedName("price") val price: Double? = null,
+    @SerializedName("rating") val rating: Double? = null,
+    @SerializedName("images") val images: List<String>? = null
 )

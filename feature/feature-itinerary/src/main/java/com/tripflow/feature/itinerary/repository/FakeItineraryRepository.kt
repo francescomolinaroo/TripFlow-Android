@@ -4,116 +4,125 @@ import com.tripflow.core.model.UiState
 import com.tripflow.feature.itinerary.model.CatalogItem
 import com.tripflow.feature.itinerary.model.CatalogSearchRequest
 import com.tripflow.feature.itinerary.model.CatalogSearchResponse
+import com.tripflow.feature.itinerary.model.CreateItineraryRequest
 import com.tripflow.feature.itinerary.model.CreateStageRequest
 import com.tripflow.feature.itinerary.model.ItineraryDetail
 import com.tripflow.feature.itinerary.model.ItinerarySummary
 import com.tripflow.feature.itinerary.model.StageDetail
 import com.tripflow.feature.itinerary.model.StagePreview
 import com.tripflow.feature.itinerary.model.StageSource
+import com.tripflow.feature.itinerary.model.StopType
 import com.tripflow.feature.itinerary.model.UpdateStageRequest
-import kotlin.math.min
+import com.tripflow.feature.itinerary.model.Visibility
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import java.util.UUID
+import kotlin.math.min
 
 class FakeItineraryRepository : ItineraryRepository {
 
     private val mockItineraries = mutableListOf(
         ItinerarySummary(
-            id = UUID.fromString("11111111-1111-1111-1111-111111111111"),
+            id = "1",
+            ownerId = "owner-1",
             title = "Costa Amalfitana",
             startDate = LocalDate.of(2026, 9, 14),
             endDate = LocalDate.of(2026, 9, 18),
-            isPublic = true,
+            visibility = Visibility.PRIVATE,
+            canEdit = true,
             stagesCount = 12,
             previewStages = listOf(
                 StagePreview(
-                    id = UUID.randomUUID(),
+                    id = "101",
                     dayNumber = 1,
                     title = "Arrivo ad Amalfi e check-in",
                     startTime = "14:00",
                     endTime = "16:00",
-                    isFromCatalog = false
+                    stopType = StopType.CUSTOM
                 ),
                 StagePreview(
-                    id = UUID.randomUUID(),
+                    id = "102",
                     dayNumber = 1,
                     title = "Passeggiata sul lungomare",
                     startTime = "17:00",
                     endTime = "19:00",
-                    isFromCatalog = true
+                    stopType = StopType.ACTIVITY
                 ),
                 StagePreview(
-                    id = UUID.randomUUID(),
+                    id = "103",
                     dayNumber = 2,
                     title = "Escursione a Positano",
                     startTime = "09:00",
                     endTime = "13:00",
-                    isFromCatalog = true
+                    stopType = StopType.TRIP
                 )
             ),
             createdAt = "2026-01-15T10:00:00Z",
             updatedAt = "2026-01-15T10:00:00Z"
         ),
         ItinerarySummary(
-            id = UUID.fromString("22222222-2222-2222-2222-222222222222"),
+            id = "2",
+            ownerId = "owner-2",
             title = "Trekking Dolomiti",
             startDate = LocalDate.of(2026, 7, 10),
             endDate = LocalDate.of(2026, 7, 15),
-            isPublic = false,
+            visibility = Visibility.SHARED,
+            canEdit = true,
             stagesCount = 8,
             previewStages = listOf(
                 StagePreview(
-                    id = UUID.randomUUID(),
+                    id = "201",
                     dayNumber = 1,
                     title = "Arrivo a Ortisei",
                     startTime = "12:00",
                     endTime = "14:00",
-                    isFromCatalog = false
+                    stopType = StopType.CUSTOM
                 ),
                 StagePreview(
-                    id = UUID.randomUUID(),
+                    id = "202",
                     dayNumber = 2,
                     title = "Alpe di Siusi - Escursione guidata",
                     startTime = "08:30",
                     endTime = "13:00",
-                    isFromCatalog = true
+                    stopType = StopType.ACTIVITY
                 )
             ),
             createdAt = "2026-02-01T10:00:00Z",
             updatedAt = "2026-02-01T10:00:00Z"
         ),
         ItinerarySummary(
-            id = UUID.fromString("33333333-3333-3333-3333-333333333333"),
+            id = "3",
+            ownerId = "owner-1",
             title = "Sicilia on the road",
             startDate = LocalDate.of(2026, 10, 1),
             endDate = LocalDate.of(2026, 10, 10),
-            isPublic = true,
+            visibility = Visibility.PUBLIC,
+            canEdit = true,
             stagesCount = 15,
             previewStages = listOf(
                 StagePreview(
-                    id = UUID.randomUUID(),
+                    id = "301",
                     dayNumber = 1,
                     title = "Catania - Ritiro auto",
                     startTime = "10:00",
                     endTime = "11:00",
-                    isFromCatalog = false
+                    stopType = StopType.CUSTOM
                 ),
                 StagePreview(
-                    id = UUID.randomUUID(),
+                    id = "302",
                     dayNumber = 1,
                     title = "Visita Etna",
                     startTime = "12:00",
                     endTime = "17:00",
-                    isFromCatalog = true
+                    stopType = StopType.ACTIVITY
                 ),
                 StagePreview(
-                    id = UUID.randomUUID(),
+                    id = "303",
                     dayNumber = 2,
                     title = "Taormina e Isola Bella",
                     startTime = "09:00",
                     endTime = "14:00",
-                    isFromCatalog = true
+                    stopType = StopType.TRIP
                 )
             ),
             createdAt = "2026-03-01T10:00:00Z",
@@ -188,40 +197,42 @@ class FakeItineraryRepository : ItineraryRepository {
         return UiState.Success(mockItineraries.toList())
     }
 
-    override suspend fun getItineraryDetail(id: UUID): UiState<ItineraryDetail> {
+    override suspend fun getItineraryDetail(id: String): UiState<ItineraryDetail> {
         val summary = mockItineraries.find { it.id == id }
         if (summary == null) return UiState.Error("Itinerario non trovato")
 
         val stages = generateMockStages(summary)
 
-        return UiState.Success(ItineraryDetail(
-            id = summary.id,
-            title = summary.title,
-            description = "Itinerario di esempio con tappe dettagliate",
-            startDate = summary.startDate,
-            endDate = summary.endDate,
-            isPublic = summary.isPublic,
-            stages = stages,
-            totalStages = stages.size,
-            createdAt = summary.createdAt,
-            updatedAt = summary.updatedAt
-        ))
+        return UiState.Success(
+            ItineraryDetail(
+                id = summary.id,
+                ownerId = summary.ownerId,
+                title = summary.title,
+                description = "Itinerario di esempio con tappe dettagliate",
+                startDate = summary.startDate,
+                endDate = summary.endDate,
+                visibility = summary.visibility,
+                canEdit = summary.canEdit,
+                stages = stages,
+                totalStages = stages.size,
+                createdAt = summary.createdAt,
+                updatedAt = summary.updatedAt
+            )
+        )
     }
 
     override suspend fun createItinerary(
-        title: String,
-        description: String?,
-        startDate: String,
-        endDate: String,
-        isPublic: Boolean
+        request: CreateItineraryRequest
     ): UiState<ItineraryDetail> {
-        val newId = UUID.randomUUID()
+        val newId = ((mockItineraries.mapNotNull { it.id.toLongOrNull() }.maxOrNull() ?: 0L) + 1L).toString()
         val summary = ItinerarySummary(
             id = newId,
-            title = title,
-            startDate = LocalDate.parse(startDate),
-            endDate = LocalDate.parse(endDate),
-            isPublic = isPublic,
+            ownerId = "owner-1",
+            title = request.title,
+            startDate = LocalDate.parse(request.startDate),
+            endDate = LocalDate.parse(request.endDate),
+            visibility = request.visibility,
+            canEdit = true,
             stagesCount = 0,
             previewStages = emptyList(),
             createdAt = java.time.Instant.now().toString(),
@@ -229,58 +240,64 @@ class FakeItineraryRepository : ItineraryRepository {
         )
         mockItineraries.add(summary)
 
-        return UiState.Success(ItineraryDetail(
-            id = newId,
-            title = title,
-            description = description,
-            startDate = LocalDate.parse(startDate),
-            endDate = LocalDate.parse(endDate),
-            isPublic = isPublic,
-            stages = emptyList(),
-            totalStages = 0,
-            createdAt = summary.createdAt,
-            updatedAt = summary.updatedAt
-        ))
+        return UiState.Success(
+            ItineraryDetail(
+                id = newId,
+                ownerId = summary.ownerId,
+                title = request.title,
+                description = request.description,
+                startDate = LocalDate.parse(request.startDate),
+                endDate = LocalDate.parse(request.endDate),
+                visibility = request.visibility,
+                canEdit = true,
+                stages = emptyList(),
+                totalStages = 0,
+                createdAt = summary.createdAt,
+                updatedAt = summary.updatedAt
+            )
+        )
     }
 
-    override suspend fun deleteItinerary(id: UUID): UiState<Unit> {
+    override suspend fun deleteItinerary(id: String): UiState<Unit> {
         mockItineraries.removeIf { it.id == id }
         return UiState.Success(Unit)
     }
 
-    override suspend fun updateVisibility(id: UUID, isPublic: Boolean): UiState<ItineraryDetail> {
+    override suspend fun updateVisibility(id: String, visibility: Visibility): UiState<ItineraryDetail> {
         val index = mockItineraries.indexOfFirst { it.id == id }
         if (index == -1) return UiState.Error("Itinerario non trovato")
 
         val old = mockItineraries[index]
-        val updated = old.copy(isPublic = isPublic, updatedAt = java.time.Instant.now().toString())
-        mockItineraries[index] = updated
+        mockItineraries[index] = old.copy(
+            visibility = visibility,
+            updatedAt = java.time.Instant.now().toString()
+        )
 
         return getItineraryDetail(id)
     }
 
-    override suspend fun addStage(itineraryId: UUID, request: CreateStageRequest): UiState<StageDetail> {
+    override suspend fun addStage(itineraryId: String, request: CreateStageRequest): UiState<StageDetail> {
         val source = request.source
+        val stopType = when (source) {
+            is StageSource.Custom -> StopType.CUSTOM
+            is StageSource.FromCatalog -> source.stopType
+        }
+        val catalogId = (source as? StageSource.FromCatalog)?.catalogItemId?.toString()
         val title = when (source) {
             is StageSource.Custom -> source.title
-            is StageSource.FromCatalog -> "Da Catalogo"
-            else -> throw IllegalArgumentException("Unknown StageSource type: ${source::class.simpleName}")
+            is StageSource.FromCatalog -> "Tappa dal catalogo"
         }
         val description = when (source) {
             is StageSource.Custom -> source.description
             is StageSource.FromCatalog -> null
-            else -> throw IllegalArgumentException("Unknown StageSource type: ${source::class.simpleName}")
         }
         val location = when (source) {
             is StageSource.Custom -> source.location
             is StageSource.FromCatalog -> null
-            else -> throw IllegalArgumentException("Unknown StageSource type: ${source::class.simpleName}")
         }
-        val isFromCatalog = source is StageSource.FromCatalog
-        val catalogItemId = (source as? StageSource.FromCatalog)?.catalogItemId
 
         val newStage = StageDetail(
-            id = UUID.randomUUID(),
+            id = UUID.randomUUID().toString(),
             dayNumber = request.dayNumber,
             date = request.date,
             startTime = request.startTime,
@@ -288,36 +305,41 @@ class FakeItineraryRepository : ItineraryRepository {
             title = title,
             description = description,
             location = location,
-            isFromCatalog = isFromCatalog,
-            catalogItemId = catalogItemId,
+            stopType = stopType,
+            viaggioId = catalogId.takeIf { stopType == StopType.TRIP },
+            attivitaId = catalogId.takeIf { stopType == StopType.ACTIVITY },
             notes = request.notes,
-            orderIndex = 0
+            orderIndex = request.orderIndex ?: 0
         )
         return UiState.Success(newStage)
     }
 
     override suspend fun updateStage(
-        itineraryId: UUID,
-        stageId: UUID,
+        itineraryId: String,
+        stageId: String,
         request: UpdateStageRequest
     ): UiState<StageDetail> {
-        return UiState.Success(StageDetail(
-            id = stageId,
-            dayNumber = 1,
-            date = LocalDate.now(),
-            startTime = request.startTime ?: "09:00",
-            endTime = request.endTime ?: "12:00",
-            title = request.title ?: "Tappa aggiornata",
-            description = request.description,
-            location = request.location,
-            isFromCatalog = false,
-            catalogItemId = null,
-            notes = request.notes,
-            orderIndex = request.orderIndex ?: 0
-        ))
+        val stopType = request.stopType ?: StopType.CUSTOM
+        return UiState.Success(
+            StageDetail(
+                id = stageId,
+                dayNumber = 1,
+                date = request.date ?: LocalDate.now(),
+                startTime = request.startTime ?: "09:00",
+                endTime = request.endTime ?: "12:00",
+                title = request.title ?: "Tappa aggiornata",
+                description = request.description,
+                location = request.location,
+                stopType = stopType,
+                viaggioId = request.viaggioId,
+                attivitaId = request.attivitaId,
+                notes = request.notes,
+                orderIndex = request.orderIndex ?: 0
+            )
+        )
     }
 
-    override suspend fun deleteStage(itineraryId: UUID, stageId: UUID): UiState<Unit> {
+    override suspend fun deleteStage(itineraryId: String, stageId: String): UiState<Unit> {
         return UiState.Success(Unit)
     }
 
@@ -325,11 +347,11 @@ class FakeItineraryRepository : ItineraryRepository {
         var filtered = mockCatalog
 
         if (request.query?.isNotBlank() == true) {
-            val q = request.query!!.lowercase()
+            val q = request.query.lowercase()
             filtered = filtered.filter {
                 it.title.lowercase().contains(q) ||
-                it.description.lowercase().contains(q) ||
-                it.location.lowercase().contains(q)
+                    it.description.lowercase().contains(q) ||
+                    it.location.lowercase().contains(q)
             }
         }
         if (request.category?.isNotBlank() == true) {
@@ -345,12 +367,24 @@ class FakeItineraryRepository : ItineraryRepository {
         val end = min(start + size, filtered.size)
         val paged = if (start < filtered.size) filtered.subList(start, end) else emptyList()
 
-        return UiState.Success(CatalogSearchResponse(
-            content = paged,
-            totalElements = filtered.size.toLong(),
-            totalPages = (filtered.size + size - 1) / size,
-            currentPage = page
-        ))
+        return UiState.Success(
+            CatalogSearchResponse(
+                content = paged,
+                totalElements = filtered.size.toLong(),
+                totalPages = (filtered.size + size - 1) / size,
+                currentPage = page
+            )
+        )
+    }
+
+    override suspend fun searchActivities(query: String): UiState<List<CatalogItem>> {
+        val normalized = query.trim().lowercase()
+        val results = mockCatalog.filter { item ->
+            normalized.isEmpty() ||
+                item.title.lowercase().contains(normalized) ||
+                item.description.lowercase().contains(normalized)
+        }
+        return UiState.Success(results)
     }
 
     override suspend fun getCatalogItem(id: UUID): UiState<CatalogItem> {
@@ -360,12 +394,20 @@ class FakeItineraryRepository : ItineraryRepository {
 
     private fun generateMockStages(summary: ItinerarySummary): List<StageDetail> {
         val days = summary.startDate.until(summary.endDate.plusDays(1), ChronoUnit.DAYS).toInt()
+        var counter = 0
         return (1..days).flatMap { day ->
             val date = summary.startDate.plusDays((day - 1).toLong())
-            val stageCount = (2..3).random()
+            val stageCount = 3
             (1..stageCount).map { stageIndex ->
+                counter += 1
+                val stopType = when (stageIndex) {
+                    2 -> StopType.TRIP
+                    3 -> StopType.ACTIVITY
+                    else -> StopType.CUSTOM
+                }
+                val catalogId = if (stopType == StopType.CUSTOM) null else UUID.randomUUID().toString()
                 StageDetail(
-                    id = UUID.randomUUID(),
+                    id = counter.toString(),
                     dayNumber = day,
                     date = date,
                     startTime = when (stageIndex) {
@@ -381,8 +423,9 @@ class FakeItineraryRepository : ItineraryRepository {
                     title = "Tappa $stageIndex - Giorno $day",
                     description = "Descrizione dettagliata della tappa",
                     location = "Luogo $day",
-                    isFromCatalog = stageIndex % 2 == 0,
-                    catalogItemId = if (stageIndex % 2 == 0) UUID.randomUUID() else null,
+                    stopType = stopType,
+                    viaggioId = catalogId.takeIf { stopType == StopType.TRIP },
+                    attivitaId = catalogId.takeIf { stopType == StopType.ACTIVITY },
                     notes = "Note personali per la tappa",
                     orderIndex = stageIndex - 1
                 )

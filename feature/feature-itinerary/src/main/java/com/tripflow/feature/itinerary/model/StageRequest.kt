@@ -4,7 +4,17 @@ import java.time.LocalDate
 import java.util.UUID
 
 sealed interface StageSource {
-    data class FromCatalog(val catalogItemId: UUID) : StageSource
+    data class FromCatalog(
+        val catalogItemId: UUID,
+        val stopType: StopType = StopType.TRIP
+    ) : StageSource {
+        init {
+            require(stopType != StopType.CUSTOM) {
+                "Le tappe da catalogo devono essere TRIP o ACTIVITY"
+            }
+        }
+    }
+
     data class Custom(
         val title: String,
         val description: String?,
@@ -18,15 +28,20 @@ data class CreateStageRequest(
     val startTime: String,
     val endTime: String,
     val source: StageSource,
-    val notes: String?
+    val notes: String?,
+    val orderIndex: Int? = null
 )
 
 data class UpdateStageRequest(
+    val date: LocalDate? = null,
     val startTime: String? = null,
     val endTime: String? = null,
     val title: String? = null,
     val description: String? = null,
     val location: String? = null,
+    val stopType: StopType? = null,
+    val viaggioId: String? = null,
+    val attivitaId: String? = null,
     val notes: String? = null,
     val orderIndex: Int? = null
 )

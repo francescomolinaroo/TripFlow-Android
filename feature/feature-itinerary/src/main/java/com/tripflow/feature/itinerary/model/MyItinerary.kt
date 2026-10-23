@@ -1,13 +1,11 @@
 package com.tripflow.feature.itinerary.model
 
-import java.util.UUID
-
 data class MyItinerary(
-    val id: UUID,
+    val id: String,
     val title: String,
     val dateRange: String,
     val stopsCount: Int,
-    val isPublic: Boolean,
+    val visibility: Visibility,
     val stopsPreview: List<StopPreview>
 )
 

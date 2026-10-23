@@ -1,51 +1,47 @@
 package com.tripflow.feature.itinerary.data.remote.dto
 
 import com.google.gson.annotations.SerializedName
-import java.util.UUID
 
 data class CreateItineraryRequestDto(
     @SerializedName("title") val title: String,
     @SerializedName("description") val description: String?,
+    @SerializedName("visibility") val visibility: String,
     @SerializedName("startDate") val startDate: String,
-    @SerializedName("endDate") val endDate: String,
-    @SerializedName("isPublic") val isPublic: Boolean
+    @SerializedName("endDate") val endDate: String
+)
+
+data class UpdateItineraryRequestDto(
+    @SerializedName("title") val title: String,
+    @SerializedName("description") val description: String?,
+    @SerializedName("visibility") val visibility: String,
+    @SerializedName("startDate") val startDate: String,
+    @SerializedName("endDate") val endDate: String
 )
 
 data class UpdateVisibilityRequestDto(
-    @SerializedName("isPublic") val isPublic: Boolean
+    @SerializedName("visibility") val visibility: String
 )
 
-data class CreateStageRequestDto(
-    @SerializedName("dayNumber") val dayNumber: Int,
-    @SerializedName("date") val date: String,
-    @SerializedName("startTime") val startTime: String,
-    @SerializedName("endTime") val endTime: String,
-    @SerializedName("source") val source: StageSourceRequestDto,
+data class AddStopRequestDto(
+    @SerializedName("stopOrder") val stopOrder: Int,
+    @SerializedName("stopType") val stopType: String,
+    @SerializedName("viaggioId") val viaggioId: String?,
+    @SerializedName("attivitaId") val attivitaId: String?,
+    @SerializedName("customTitle") val customTitle: String?,
+    @SerializedName("customDescription") val customDescription: String?,
+    @SerializedName("startDatetime") val startDatetime: String,
+    @SerializedName("endDatetime") val endDatetime: String,
     @SerializedName("notes") val notes: String?
 )
 
-sealed class StageSourceRequestDto {
-    abstract val type: String
-
-    data class FromCatalog(
-        @SerializedName("catalogItemId") val catalogItemId: String,
-        override val type: String = "FROM_CATALOG"
-    ) : StageSourceRequestDto()
-
-    data class Custom(
-        @SerializedName("title") val title: String,
-        @SerializedName("description") val description: String?,
-        @SerializedName("location") val location: String?,
-        override val type: String = "CUSTOM"
-    ) : StageSourceRequestDto()
-}
-
-data class UpdateStageRequestDto(
-    @SerializedName("startTime") val startTime: String?,
-    @SerializedName("endTime") val endTime: String?,
-    @SerializedName("title") val title: String?,
-    @SerializedName("description") val description: String?,
-    @SerializedName("location") val location: String?,
-    @SerializedName("notes") val notes: String?,
-    @SerializedName("orderIndex") val orderIndex: Int?
+data class UpdateStopRequestDto(
+    @SerializedName("stopOrder") val stopOrder: Int? = null,
+    @SerializedName("stopType") val stopType: String? = null,
+    @SerializedName("viaggioId") val viaggioId: String? = null,
+    @SerializedName("attivitaId") val attivitaId: String? = null,
+    @SerializedName("customTitle") val customTitle: String? = null,
+    @SerializedName("customDescription") val customDescription: String? = null,
+    @SerializedName("startDatetime") val startDatetime: String? = null,
+    @SerializedName("endDatetime") val endDatetime: String? = null,
+    @SerializedName("notes") val notes: String? = null
 )

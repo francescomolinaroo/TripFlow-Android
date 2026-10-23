@@ -1,14 +1,15 @@
 package com.tripflow.feature.itinerary.model
 
 import java.time.LocalDate
-import java.util.UUID
 
 data class ItinerarySummary(
-    val id: UUID,
+    val id: String,
+    val ownerId: String?,
     val title: String,
     val startDate: LocalDate,
     val endDate: LocalDate,
-    val isPublic: Boolean,
+    val visibility: Visibility,
+    val canEdit: Boolean?,
     val stagesCount: Int,
     val previewStages: List<StagePreview>,
     val createdAt: String,
@@ -16,10 +17,13 @@ data class ItinerarySummary(
 )
 
 data class StagePreview(
-    val id: UUID,
+    val id: String,
     val dayNumber: Int,
     val title: String,
     val startTime: String,
     val endTime: String,
+    val stopType: StopType
+) {
     val isFromCatalog: Boolean
-)
+        get() = stopType != StopType.CUSTOM
+}
