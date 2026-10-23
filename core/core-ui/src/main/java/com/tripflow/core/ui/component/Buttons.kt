@@ -1,6 +1,8 @@
 package com.tripflow.core.ui.component
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -13,6 +15,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -27,15 +31,29 @@ fun PrimaryButton(
     enabled: Boolean = true,
     loading: Boolean = false,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+
+    val containerColor: Color
+    val contentColor: Color
+    if (pressed) {
+        containerColor = TripFlowColors.ButtonPressed
+        contentColor = TripFlowColors.ButtonPressedContent
+    } else {
+        containerColor = TripFlowColors.ButtonContainer
+        contentColor = TripFlowColors.ButtonContent
+    }
+
     Button(
         onClick = onClick,
         enabled = enabled && !loading,
         modifier = modifier.fillMaxWidth().height(Dimens.buttonHeight),
         shape = RoundedCornerShape(Dimens.radiusButton),
         contentPadding = PaddingValues(horizontal = Dimens.gapL),
+        interactionSource = interactionSource,
         colors = ButtonDefaults.buttonColors(
-            containerColor = TripFlowColors.Accent,
-            contentColor = Color.White,
+            containerColor = containerColor,
+            contentColor = contentColor,
             disabledContainerColor = TripFlowColors.Surface3,
             disabledContentColor = TripFlowColors.TextDisabled,
         ),
@@ -43,7 +61,7 @@ fun PrimaryButton(
         if (loading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(22.dp),
-                color = Color.White,
+                color = TripFlowColors.FernGreen,
                 strokeWidth = 2.dp,
             )
         } else {

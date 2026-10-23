@@ -26,16 +26,16 @@ data class StatusStyle(
 object Status {
 
     fun prenotazione(stato: String?): StatusStyle = when (stato) {
-        "IN_ATTESA" -> StatusStyle("IN ATTESA", TripFlowColors.Warning, TripFlowColors.WarningSoft)
-        "CONFERMATA" -> StatusStyle("CONFERMATA", TripFlowColors.Success, TripFlowColors.SuccessSoft)
-        "COMPLETATA" -> StatusStyle("COMPLETATA", TripFlowColors.AccentDark, TripFlowColors.AccentSoft)
+        "IN_ATTESA" -> StatusStyle("IN ATTESA", TripFlowColors.StatusContent, TripFlowColors.StatusContainer)
+        "CONFERMATA" -> StatusStyle("CONFERMATA", TripFlowColors.StatusContent, TripFlowColors.StatusContainer)
+        "COMPLETATA" -> StatusStyle("COMPLETATA", TripFlowColors.StatusContent, TripFlowColors.StatusContainer)
         "ANNULLATA" -> StatusStyle("ANNULLATA", TripFlowColors.TextSecondary, TripFlowColors.Surface3)
         else -> StatusStyle(stato ?: "—", TripFlowColors.TextSecondary, TripFlowColors.Surface3)
     }
 
     fun pagamento(stato: String?): StatusStyle = when (stato) {
-        "IN_ATTESA" -> StatusStyle("IN ATTESA", TripFlowColors.Warning, TripFlowColors.WarningSoft)
-        "COMPLETATO" -> StatusStyle("COMPLETATO", TripFlowColors.Success, TripFlowColors.SuccessSoft)
+        "IN_ATTESA" -> StatusStyle("IN ATTESA", TripFlowColors.StatusContent, TripFlowColors.StatusContainer)
+        "COMPLETATO" -> StatusStyle("COMPLETATO", TripFlowColors.StatusContent, TripFlowColors.StatusContainer)
         "FALLITO" -> StatusStyle("FALLITO", TripFlowColors.Error, TripFlowColors.ErrorSoft)
         "RIMBORSATO" -> StatusStyle("RIMBORSATO", TripFlowColors.TextSecondary, TripFlowColors.Surface3)
         else -> StatusStyle(stato ?: "—", TripFlowColors.TextSecondary, TripFlowColors.Surface3)

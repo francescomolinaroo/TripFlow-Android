@@ -5,22 +5,35 @@ import androidx.compose.ui.graphics.Color
 
 object TripFlowColors {
 
-    val Background = Color(0xFFFFFFFF)
-    val Surface = Color(0xFFFAFBFC)
-    val Surface2 = Color(0xFFF6F7F9)
-    val Surface3 = Color(0xFFF1F3F6)
-    val Border = Color(0xFFE4E7EC)
-    val Divider = Color(0xFFF1F3F6)
+    val FernGreen = Color(0xFF437118)
+    val Pistacchio = Color(0xFFAFD06E)
+    val Beige = Color(0xFFF5F3D8)
+    val CarolinaBlue = Color(0xFF87AECE)
+
+    val Background = Color(0xFFFBFAF5)
+    val Surface = Beige
+    val Surface2 = Color(0xFFEFECCF)
+    val Surface3 = Color(0xFFE7E4C4)
+    val Border = Color(0xFFDEDAB6)
+    val Divider = Color(0xFFEAE7C8)
 
     val TextPrimary = Color(0xFF101319)
     val TextBody = Color(0xFF414A57)
-    val TextSecondary = Color(0xFF8A93A1)
-    val TextDisabled = Color(0xFFC4CAD3)
+    val TextSecondary = Color(0xFF7A8290)
+    val TextDisabled = Color(0xFFB4B7AE)
 
-    val Accent = Color(0xFF4F46E5)
-    val AccentDark = Color(0xFF4338CA)
-    val AccentSoft = Color(0xFFEEF0FE)
-    val AccentBorder = Color(0xFFDDDFFB)
+    val Accent = FernGreen
+    val AccentDark = Color(0xFF2F5010)
+    val AccentSoft = Pistacchio
+    val AccentBorder = Color(0xFFCFE2A0)
+
+    val ButtonContainer = FernGreen
+    val ButtonPressed = AccentDark
+    val ButtonContent = Color.White
+    val ButtonPressedContent = Color.White
+
+    val StatusContainer = CarolinaBlue
+    val StatusContent = TextPrimary
 
     val Success = Color(0xFF15803D)
     val SuccessSoft = Color(0xFFE7F6EC)
@@ -36,13 +49,18 @@ object TripFlowColors {
 }
 
 internal val TripFlowColorScheme = lightColorScheme(
-    primary = TripFlowColors.Accent,
+    primary = TripFlowColors.FernGreen,
     onPrimary = Color.White,
-    primaryContainer = TripFlowColors.AccentSoft,
-    onPrimaryContainer = TripFlowColors.AccentDark,
+    primaryContainer = TripFlowColors.Pistacchio,
+    onPrimaryContainer = TripFlowColors.TextPrimary,
 
     secondary = TripFlowColors.TextPrimary,
     onSecondary = Color.White,
+    secondaryContainer = TripFlowColors.Pistacchio,
+    onSecondaryContainer = TripFlowColors.TextPrimary,
+
+    tertiary = TripFlowColors.CarolinaBlue,
+    onTertiary = TripFlowColors.TextPrimary,
 
     background = TripFlowColors.Background,
     onBackground = TripFlowColors.TextPrimary,
@@ -51,6 +69,11 @@ internal val TripFlowColorScheme = lightColorScheme(
     onSurface = TripFlowColors.TextPrimary,
     surfaceVariant = TripFlowColors.Surface2,
     onSurfaceVariant = TripFlowColors.TextSecondary,
+    surfaceContainerLowest = TripFlowColors.Background,
+    surfaceContainerLow = TripFlowColors.Background,
+    surfaceContainer = TripFlowColors.Beige,
+    surfaceContainerHigh = TripFlowColors.Background,
+    surfaceContainerHighest = TripFlowColors.Surface3,
 
     outline = TripFlowColors.Border,
     outlineVariant = TripFlowColors.Divider,
