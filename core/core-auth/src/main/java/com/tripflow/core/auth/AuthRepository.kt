@@ -11,30 +11,29 @@ import com.tripflow.core.network.auth.PublicUserResponse
 import com.tripflow.core.network.auth.RefreshTokenRequest
 import com.tripflow.core.network.auth.RegisterRequest
 import com.tripflow.core.network.auth.RegisterResponse
+import com.tripflow.core.network.auth.ResendVerificationRequest
+import com.tripflow.core.network.auth.ResetPasswordRequest
 import com.tripflow.core.network.auth.UpdateProfileRequest
+import com.tripflow.core.network.auth.VerifyEmailRequest
 import com.tripflow.core.network.auth.UserLookupByKeycloakIdsRequest
 import com.tripflow.core.network.auth.UserLookupRequest
 import com.tripflow.core.network.auth.UserResponse
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import okhttp3.MediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.HttpException
 
-class AuthRepository(context: Context? = null) {
+open class AuthRepository(context: Context? = null) {
     private val tokenStorage = context?.let { TokenStorage(it) }
 
-    suspend fun checkSession(): Result<UserResponse> {
+    open suspend fun checkSession(): Result<UserResponse> {
         if (tokenStorage?.getAccessToken() == null) {
             return Result.failure(IllegalStateException("Sessione non disponibile"))
         }
-
         return getMe()
     }
 
-    suspend fun register(request: RegisterRequest): Result<RegisterResponse> {
+    open suspend fun register(request: RegisterRequest): Result<RegisterResponse> {
         return try {
             Result.success(ApiClient.authApi.register(request))
         } catch (exception: Exception) {
@@ -42,40 +41,20 @@ class AuthRepository(context: Context? = null) {
         }
     }
 
-    suspend fun login(email: String, password: String): Result<UserResponse> {
+    open suspend fun login(email: String, password: String): Result<UserResponse> {
         return try {
             val response = ApiClient.authApi.login(
                 LoginRequest(email = email, password = password)
             )
             tokenStorage?.save(response.accessToken, response.refreshToken)
             val user = response.user
-            if (user != null) {
-                Result.success(user)
-            } else {
-                getMe()
-            }
-        } catch (exception: Exception) {
-            Result.failure(exception)
-        }
-    }
-
-    suspend fun getMe(): Result<UserResponse> {
-        return try {
-            val token = tokenStorage?.getAccessToken()
-                ?: return Result.failure(IllegalStateException("Sessione non disponibile"))
-            Result.success(ApiClient.authApi.getMe("Bearer $token"))
+            if (user != null) Result.success(user) else getMe()
         } catch (exception: HttpException) {
-            if (exception.response()?.code() == 401 && refreshToken()) {
-                try {
-                    val refreshedToken = tokenStorage?.getAccessToken()
-                        ?: return Result.failure(IllegalStateException("Sessione non disponibile"))
-                    Result.success(ApiClient.authApi.getMe("Bearer $refreshedToken"))
-                } catch (retryException: Exception) {
-                    logout()
-                    Result.failure(retryException)
-                }
+            // 403 = email non verificata: la UI deve mandare l'utente alla verifica, non trattarlo
+            // come credenziali errate
+            if (exception.code() == 403) {
+                Result.failure(EmailNotVerifiedException(email))
             } else {
-                logout()
                 Result.failure(exception)
             }
         } catch (exception: Exception) {
@@ -83,21 +62,14 @@ class AuthRepository(context: Context? = null) {
         }
     }
 
-    suspend fun updateProfile(request: UpdateProfileRequest): Result<UserResponse> {
-        return try {
-            val token = tokenStorage?.getAccessToken()
-                ?: return Result.failure(IllegalStateException("Sessione non disponibile"))
-            Result.success(ApiClient.authApi.updateProfile("Bearer $token", request))
-        } catch (exception: Exception) {
-            Result.failure(exception)
-        }
-    }
+    open suspend fun getMe(): Result<UserResponse> =
+        withAuth { token -> ApiClient.authApi.getMe(token) }
 
-    suspend fun uploadAvatar(uri: Uri, context: Context): Result<String> {
-        return try {
-            val token = tokenStorage?.getAccessToken()
-                ?: return Result.failure(IllegalStateException("Sessione non disponibile"))
+    open suspend fun updateProfile(request: UpdateProfileRequest): Result<UserResponse> =
+        withAuth { token -> ApiClient.authApi.updateProfile(token, request) }
 
+    open suspend fun uploadAvatar(uri: Uri, context: Context): Result<String> {
+        return withAuth { token ->
             val contentResolver = context.contentResolver
             val mimeType = contentResolver.getType(uri) ?: "image/jpeg"
             val extension = when (mimeType) {
@@ -106,37 +78,21 @@ class AuthRepository(context: Context? = null) {
                 else -> "jpg"
             }
             val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                ?: return Result.failure(IllegalStateException("Impossibile leggere il file immagine"))
+                ?: throw IllegalStateException("Impossibile leggere il file immagine")
 
-            val mediaType = MediaType.parse(mimeType)
-            val requestBody = RequestBody.create(mediaType, bytes)
-            val part = MultipartBody.Part.createFormData(
-                "file",
-                "avatar.$extension",
-                requestBody
-            )
-
-            val response = ApiClient.authApi.uploadAvatar("Bearer $token", part)
-            val url = response["url"]
-                ?: return Result.failure(IllegalStateException("URL avatar non restituito dal server"))
-            Result.success(url)
-        } catch (exception: Exception) {
-            Result.failure(exception)
+            val requestBody = RequestBody.create(MediaType.parse(mimeType), bytes)
+            val part = MultipartBody.Part.createFormData("file", "avatar.$extension", requestBody)
+            val response = ApiClient.authApi.uploadAvatar(token, part)
+            response["url"] ?: throw IllegalStateException("URL avatar non restituito dal server")
         }
     }
 
-    suspend fun changePassword(newPassword: String): Result<Unit> {
-        return try {
-            val token = tokenStorage?.getAccessToken()
-                ?: return Result.failure(IllegalStateException("Sessione non disponibile"))
-            ApiClient.authApi.changePassword("Bearer $token", ChangePasswordRequest(newPassword))
-            Result.success(Unit)
-        } catch (exception: Exception) {
-            Result.failure(exception)
+    open suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> =
+        withAuth { token ->
+            ApiClient.authApi.changePassword(token, ChangePasswordRequest(currentPassword, newPassword))
         }
-    }
 
-    suspend fun forgotPassword(email: String): Result<Unit> {
+    open suspend fun forgotPassword(email: String): Result<Unit> {
         return try {
             ApiClient.authApi.forgotPassword(ForgotPasswordRequest(email = email))
             Result.success(Unit)
@@ -145,15 +101,39 @@ class AuthRepository(context: Context? = null) {
         }
     }
 
-    suspend fun deleteAccount(): Result<Unit> {
+    open suspend fun resetPassword(email: String, code: String, newPassword: String): Result<Unit> {
         return try {
-            val token = tokenStorage?.getAccessToken()
-                ?: return Result.failure(IllegalStateException("Sessione non disponibile"))
-            ApiClient.authApi.deleteAccount("Bearer $token")
-            logout()
+            ApiClient.authApi.resetPassword(
+                ResetPasswordRequest(email = email, code = code, newPassword = newPassword)
+            )
             Result.success(Unit)
         } catch (exception: Exception) {
             Result.failure(exception)
+        }
+    }
+
+    open suspend fun verifyEmail(email: String, code: String): Result<Unit> {
+        return try {
+            ApiClient.authApi.verifyEmail(VerifyEmailRequest(email = email, code = code))
+            Result.success(Unit)
+        } catch (exception: Exception) {
+            Result.failure(exception)
+        }
+    }
+
+    open suspend fun resendVerification(email: String): Result<Unit> {
+        return try {
+            ApiClient.authApi.resendVerification(ResendVerificationRequest(email = email))
+            Result.success(Unit)
+        } catch (exception: Exception) {
+            Result.failure(exception)
+        }
+    }
+
+    open suspend fun deleteAccount(): Result<Unit> {
+        return withAuth { token ->
+            ApiClient.authApi.deleteAccount(token)
+            logout()
         }
     }
 
@@ -167,6 +147,18 @@ class AuthRepository(context: Context? = null) {
             true
         } catch (exception: Exception) {
             false
+        }
+    }
+
+    open suspend fun logout() {
+        val refreshToken = tokenStorage?.getRefreshToken()
+        tokenStorage?.clear()
+        if (!refreshToken.isNullOrBlank()) {
+            try {
+                ApiClient.authApi.logout(LogoutRequest(refreshToken))
+            } catch (_: Exception) {
+                // Revoca best-effort
+            }
         }
     }
 
@@ -186,42 +178,38 @@ class AuthRepository(context: Context? = null) {
         }
     }
 
-    suspend fun lookupUsers(emails: List<String>): Result<List<PublicUserResponse>> {
-        return try {
-            val token = tokenStorage?.getAccessToken()
-                ?: return Result.failure(IllegalStateException("Sessione non disponibile"))
-            Result.success(ApiClient.authApi.lookupUsers("Bearer $token", UserLookupRequest(emails)))
-        } catch (exception: Exception) {
-            Result.failure(exception)
+    suspend fun lookupUsers(emails: List<String>): Result<List<PublicUserResponse>> =
+        withAuth { token ->
+            ApiClient.authApi.lookupUsers(token, UserLookupRequest(emails))
         }
-    }
 
-    suspend fun lookupUsersByKeycloakIds(keycloakIds: List<String>): Result<List<PublicUserResponse>> {
-        return try {
-            val token = tokenStorage?.getAccessToken()
-                ?: return Result.failure(IllegalStateException("Sessione non disponibile"))
-            Result.success(
-                ApiClient.authApi.lookupUsersByKeycloakIds(
-                    "Bearer $token",
-                    UserLookupByKeycloakIdsRequest(keycloakIds)
-                )
-            )
-        } catch (exception: Exception) {
-            Result.failure(exception)
+    suspend fun lookupUsersByKeycloakIds(keycloakIds: List<String>): Result<List<PublicUserResponse>> =
+        withAuth { token ->
+            ApiClient.authApi.lookupUsersByKeycloakIds(token, UserLookupByKeycloakIdsRequest(keycloakIds))
         }
-    }
 
-    fun logout() {
-        val refreshToken = tokenStorage?.getRefreshToken()
-        tokenStorage?.clear()
-        if (!refreshToken.isNullOrBlank()) {
-            CoroutineScope(Dispatchers.IO).launch {
+    // Esegue il blocco con il token corrente; in caso di 401 tenta il refresh e riprova una volta.
+    private suspend fun <T> withAuth(block: suspend (bearerToken: String) -> T): Result<T> {
+        val token = tokenStorage?.getAccessToken()
+            ?: return Result.failure(IllegalStateException("Sessione non disponibile"))
+        return try {
+            Result.success(block("Bearer $token"))
+        } catch (exception: HttpException) {
+            if (exception.response()?.code() == 401 && refreshToken()) {
+                val refreshed = tokenStorage.getAccessToken()
+                    ?: return Result.failure(IllegalStateException("Sessione non disponibile"))
                 try {
-                    ApiClient.authApi.logout(LogoutRequest(refreshToken))
-                } catch (_: Exception) {
-                    // Revoca asincrona best-effort
+                    Result.success(block("Bearer $refreshed"))
+                } catch (retryException: Exception) {
+                    logout()
+                    Result.failure(retryException)
                 }
+            } else {
+                if (exception.response()?.code() == 401) logout()
+                Result.failure(exception)
             }
+        } catch (exception: Exception) {
+            Result.failure(exception)
         }
     }
 }

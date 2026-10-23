@@ -1,13 +1,20 @@
 ﻿package com.tripflow.core.auth
 
 import android.content.Context
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKeys
 import com.tripflow.core.network.ApiClient
 
 class TokenStorage(context: Context) {
-    private val preferences = context.getSharedPreferences("tripflow_auth", Context.MODE_PRIVATE)
+    private val preferences = EncryptedSharedPreferences.create(
+        "tripflow_auth_secure",
+        MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC),
+        context,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
 
     init {
-        // Collega automaticamente il token all'interceptor di rete
         ApiClient.tokenProvider = { getAccessToken() }
     }
 

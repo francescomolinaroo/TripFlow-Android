@@ -5,5 +5,6 @@ import java.util.UUID
 data class RegisterResponse(
     val id: UUID,
     val email: String,
-    val requiresLogin: Boolean
+    val requiresLogin: Boolean,
+    val requiresVerification: Boolean = false
 )

@@ -4,9 +4,11 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -23,10 +25,11 @@ fun PrimaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    loading: Boolean = false,
 ) {
     Button(
         onClick = onClick,
-        enabled = enabled,
+        enabled = enabled && !loading,
         modifier = modifier.fillMaxWidth().height(Dimens.buttonHeight),
         shape = RoundedCornerShape(Dimens.radiusButton),
         contentPadding = PaddingValues(horizontal = Dimens.gapL),
@@ -37,7 +40,15 @@ fun PrimaryButton(
             disabledContentColor = TripFlowColors.TextDisabled,
         ),
     ) {
-        Text(text, style = MaterialTheme.typography.titleMedium)
+        if (loading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(22.dp),
+                color = Color.White,
+                strokeWidth = 2.dp,
+            )
+        } else {
+            Text(text, style = MaterialTheme.typography.titleMedium)
+        }
     }
 }
 

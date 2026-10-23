@@ -27,6 +27,15 @@ interface AuthApi {
     @POST("user-auth-service/api/auth/forgot-password")
     suspend fun forgotPassword(@Body request: ForgotPasswordRequest)
 
+    @POST("user-auth-service/api/auth/reset-password")
+    suspend fun resetPassword(@Body request: ResetPasswordRequest)
+
+    @POST("user-auth-service/api/auth/verify-email")
+    suspend fun verifyEmail(@Body request: VerifyEmailRequest)
+
+    @POST("user-auth-service/api/auth/resend-verification")
+    suspend fun resendVerification(@Body request: ResendVerificationRequest)
+
     @GET("user-auth-service/api/auth/me")
     suspend fun getMe(@Header("Authorization") authorization: String): UserResponse
 

@@ -13,8 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ListAlt
@@ -26,15 +26,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.tripflow.core.auth.AuthRepository
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.tripflow.core.model.UiState
 import com.tripflow.core.network.auth.UserResponse
 import com.tripflow.core.ui.component.DangerButton
@@ -47,7 +45,7 @@ import com.tripflow.core.ui.theme.TripFlowTheme
 
 @Composable
 fun UserDashboardScreen(
-    authRepository: AuthRepository = AuthRepository(),
+    viewModel: UserDashboardViewModel = hiltViewModel(),
     onBackClick: (() -> Unit)? = null,
     onLogoutClick: () -> Unit = {},
     onSessionExpired: () -> Unit = {},
@@ -58,17 +56,20 @@ fun UserDashboardScreen(
     onReceivedBookingsClick: () -> Unit = {},
     onCreateTripClick: () -> Unit = {}
 ) {
-    var profileState by remember { mutableStateOf<UiState<UserResponse>>(UiState.Loading) }
+    val state by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(Unit) {
-        val result = authRepository.getMe()
-        profileState = result.fold(
-            onSuccess = { UiState.Success(it) },
-            onFailure = {
-                onSessionExpired()
-                UiState.Error(it.message ?: "Profilo non disponibile")
-            }
-        )
+    LaunchedEffect(state.isLoggedOut) {
+        if (state.isLoggedOut) {
+            viewModel.onNavigated()
+            onLogoutClick()
+        }
+    }
+
+    LaunchedEffect(state.sessionExpired) {
+        if (state.sessionExpired) {
+            viewModel.onNavigated()
+            onSessionExpired()
+        }
     }
 
     Scaffold(containerColor = TripFlowColors.Background) { innerPadding ->
@@ -79,42 +80,28 @@ fun UserDashboardScreen(
                 .padding(Dimens.screenPadding),
             verticalArrangement = Arrangement.spacedBy(Dimens.gapL)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Dimens.gapS)
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Dimens.gapS)) {
                 if (onBackClick != null) {
                     IconButton(onClick = onBackClick) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Indietro",
-                            tint = TripFlowColors.TextPrimary
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro", tint = TripFlowColors.TextPrimary)
                     }
                 }
-                Text(
-                    text = "Il mio profilo",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = TripFlowColors.TextPrimary
-                )
+                Text("Il mio profilo", style = MaterialTheme.typography.headlineMedium, color = TripFlowColors.TextPrimary)
             }
 
-            when (val state = profileState) {
+            when (val profileState = state.profileState) {
                 UiState.Loading -> Text("Caricamento profilo...", color = TripFlowColors.TextSecondary)
                 is UiState.Success -> {
-                    val role = dashboardRole(state.data.role)
-                    Text(
-                        text = "Benvenuto ${state.data.firstName}",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = TripFlowColors.TextPrimary
-                    )
+                    val role = dashboardRole(profileState.data.role)
+
+                    Text("Benvenuto ${profileState.data.firstName}", style = MaterialTheme.typography.headlineSmall, color = TripFlowColors.TextPrimary)
                     UserBadge(
-                        name = "${state.data.firstName} ${state.data.lastName}",
-                        caption = state.data.email,
-                        imageUrl = state.data.profileImage,
+                        name = "${profileState.data.firstName} ${profileState.data.lastName}",
+                        caption = profileState.data.email,
+                        imageUrl = profileState.data.profileImage,
                         size = 64.dp
                     )
-                    StatusChip(style = Status.ruolo(state.data.role))
+                    StatusChip(style = Status.ruolo(profileState.data.role))
 
                     Text(
                         text = when (role) {
@@ -125,33 +112,28 @@ fun UserDashboardScreen(
                         style = MaterialTheme.typography.labelSmall,
                         color = TripFlowColors.TextSecondary
                     )
-                    if (role == DashboardRole.ORGANIZER) {
-                        ProfileAction(icon = Icons.Default.AddCircle, title = "Crea nuovo viaggio", onClick = onCreateTripClick)
-                        ProfileAction(icon = Icons.Default.ListAlt, title = "I miei viaggi e itinerari", onClick = onMyTripsClick)
-                        ProfileAction(icon = Icons.Default.CreditCard, title = "Prenotazioni ricevute", onClick = onReceivedBookingsClick)
-                    }
-                }
-                is UiState.Error -> Text(state.message, color = TripFlowColors.Error)
-                is UiState.Empty -> Text(state.message ?: "Profilo non disponibile", color = TripFlowColors.TextSecondary)
-            }
 
-            Spacer(modifier = Modifier.height(Dimens.gapS))
-            Text("ACCOUNT", style = MaterialTheme.typography.labelSmall, color = TripFlowColors.TextSecondary)
-            ProfileAction(icon = Icons.Default.Edit, title = "Modifica profilo", onClick = {
-                val state = profileState
-                if (state is UiState.Success) {
-                    onEditProfileClick(state.data)
+                    when (role) {
+                        DashboardRole.ORGANIZER -> {
+                            ProfileAction(icon = Icons.Default.AddCircle, title = "Crea nuovo viaggio", onClick = onCreateTripClick)
+                            ProfileAction(icon = Icons.Default.ListAlt, title = "I miei viaggi e itinerari", onClick = onMyTripsClick)
+                            ProfileAction(icon = Icons.Default.CreditCard, title = "Prenotazioni ricevute", onClick = onReceivedBookingsClick)
+                        }
+                        DashboardRole.TRAVELER -> {
+                            ProfileAction(icon = Icons.Default.CreditCard, title = "Le mie prenotazioni", onClick = onBookingsClick)
+                            ProfileAction(icon = Icons.Default.Star, title = "Le mie recensioni", onClick = onReviewsClick)
+                        }
+                        DashboardRole.UNKNOWN -> Unit
+                    }
+
+                    Spacer(modifier = Modifier.height(Dimens.gapS))
+                    Text("ACCOUNT", style = MaterialTheme.typography.labelSmall, color = TripFlowColors.TextSecondary)
+                    ProfileAction(icon = Icons.Default.Edit, title = "Modifica profilo", onClick = { onEditProfileClick(profileState.data) })
+                    DangerButton(text = "Esci", onClick = viewModel::logout)
                 }
-            })
-            ProfileAction(icon = Icons.Default.CreditCard, title = "Le mie prenotazioni", onClick = onBookingsClick)
-            ProfileAction(icon = Icons.Default.Star, title = "Le mie recensioni", onClick = onReviewsClick)
-            DangerButton(
-                text = "Esci",
-                onClick = {
-                    authRepository.logout()
-                    onLogoutClick()
-                }
-            )
+                is UiState.Error -> Text(profileState.message, color = TripFlowColors.Error)
+                is UiState.Empty -> Text(profileState.message ?: "Profilo non disponibile", color = TripFlowColors.TextSecondary)
+            }
         }
     }
 }
@@ -180,7 +162,5 @@ private fun ProfileAction(
 @Preview(showBackground = true)
 @Composable
 private fun UserDashboardScreenPreview() {
-    TripFlowTheme {
-        UserDashboardScreen()
-    }
+    TripFlowTheme { }
 }

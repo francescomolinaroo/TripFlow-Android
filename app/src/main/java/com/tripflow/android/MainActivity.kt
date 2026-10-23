@@ -29,7 +29,9 @@ import com.tripflow.feature.auth.EditProfileScreen
 import com.tripflow.feature.auth.ForgotPasswordScreen
 import com.tripflow.feature.auth.LoginScreen
 import com.tripflow.feature.auth.RegisterScreen
+import com.tripflow.feature.auth.ResetPasswordScreen
 import com.tripflow.feature.auth.UserDashboardScreen
+import com.tripflow.feature.auth.VerifyEmailScreen
 import com.tripflow.feature.auth.dashboardRole
 import com.tripflow.feature.catalog.presentation.detail.TripDetailScreen
 import com.tripflow.feature.itinerary.ui.myitineraries.MyItinerariesScreen
@@ -38,7 +40,9 @@ import com.tripflow.feature.review.ui.WriteReviewScreen
 import com.tripflow.feature.catalog.presentation.discover.DiscoverScreen
 import com.tripflow.feature.catalog.presentation.create.CreateTripScreen
 import com.tripflow.feature.booking.ui.ReceivedBookingsScreen
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,6 +58,8 @@ class MainActivity : ComponentActivity() {
                 var reviewBooking by remember { mutableStateOf<BookingUi?>(null) }
                 var reviewListTripId by remember { mutableStateOf<String?>(null) }
                 var loginSuccessMessage by remember { mutableStateOf<String?>(null) }
+                // email trasportata tra le schermate di auth (registrazione→verifica, recupero→reset)
+                var authEmail by remember { mutableStateOf("") }
 
                 LaunchedEffect(Unit) {
                     val sessionResult = authRepository.checkSession()
@@ -80,6 +86,8 @@ class MainActivity : ComponentActivity() {
                         "create_trip" -> "dashboard"
                         "register" -> "login"
                         "forgot_password" -> "login"
+                        "reset_password" -> "forgot_password"
+                        "verify_email" -> "login"
                         "itinerary_list" -> "discover"
                         else -> "discover"
                     }
@@ -163,7 +171,6 @@ class MainActivity : ComponentActivity() {
                             )
                             "itinerary_list" -> MyItinerariesScreen(onCreateNewClick = { /* TODO */ })
                             "login" -> LoginScreen(
-                                authRepository = authRepository,
                                 onLoginClick = { user ->
                                     currentUser = user
                                     loginSuccessMessage = null
@@ -182,13 +189,33 @@ class MainActivity : ComponentActivity() {
                                     loginSuccessMessage = null
                                     currentScreen = "discover"
                                 },
+                                onNeedsVerification = { email ->
+                                    authEmail = email
+                                    loginSuccessMessage = null
+                                    currentScreen = "verify_email"
+                                },
                                 successMessage = loginSuccessMessage
                             )
                             "forgot_password" -> ForgotPasswordScreen(
-                                authRepository = authRepository,
                                 onBackClick = { currentScreen = "login" },
-                                onSuccess = {
-                                    loginSuccessMessage = "Se l'indirizzo email esiste, riceverai una mail con le istruzioni"
+                                onSuccess = { email ->
+                                    authEmail = email
+                                    currentScreen = "reset_password"
+                                }
+                            )
+                            "reset_password" -> ResetPasswordScreen(
+                                email = authEmail,
+                                onBackClick = { currentScreen = "login" },
+                                onResetComplete = {
+                                    loginSuccessMessage = "Password aggiornata, ora puoi accedere"
+                                    currentScreen = "login"
+                                }
+                            )
+                            "verify_email" -> VerifyEmailScreen(
+                                email = authEmail,
+                                onBackClick = { currentScreen = "login" },
+                                onVerified = {
+                                    loginSuccessMessage = "Email verificata, ora puoi accedere"
                                     currentScreen = "login"
                                 }
                             )
@@ -216,16 +243,15 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                             "register" -> RegisterScreen(
-                                authRepository = authRepository,
-                                onRegisterClick = {
-                                    loginSuccessMessage = "Registrazione completata, ora puoi accedere"
-                                    currentScreen = "login"
+                                onRegisterClick = { email ->
+                                    authEmail = email
+                                    loginSuccessMessage = null
+                                    currentScreen = "verify_email"
                                 },
                                 onLoginClick = { currentScreen = "login" },
                                 onBackClick = { currentScreen = "login" }
                             )
                             "dashboard" -> UserDashboardScreen(
-                                authRepository = authRepository,
                                 onLogoutClick = {
                                     currentUser = null
                                     currentScreen = "login"
@@ -250,7 +276,6 @@ class MainActivity : ComponentActivity() {
                             "edit_profile" -> editingUser?.let { user ->
                                 EditProfileScreen(
                                     user = user,
-                                    authRepository = authRepository,
                                     onBackClick = { currentScreen = "dashboard" },
                                     onSaved = { updatedUser ->
                                         currentUser = updatedUser
