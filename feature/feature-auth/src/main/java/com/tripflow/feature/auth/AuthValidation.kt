@@ -1,5 +1,8 @@
 package com.tripflow.feature.auth
 
+import java.time.LocalDate
+import java.time.format.DateTimeParseException
+
 private val EMAIL_REGEX = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
 
 internal fun isEmailValid(email: String): Boolean =
@@ -11,8 +14,16 @@ internal fun isPasswordValidForLogin(password: String): Boolean =
 internal fun isPasswordValidForRegister(password: String): Boolean =
     password.length >= 8
 
-internal fun isDateOfBirthValid(date: String): Boolean =
-    date.isBlank() || Regex("""^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$""").matches(date)
+// Data reale (niente 31 febbraio) e non nel futuro; vuota = campo facoltativo.
+internal fun isDateOfBirthValid(date: String): Boolean {
+    if (date.isBlank()) return true
+    if (!Regex("""^\d{4}-\d{2}-\d{2}$""").matches(date)) return false
+    return try {
+        !LocalDate.parse(date).isAfter(LocalDate.now())
+    } catch (_: DateTimeParseException) {
+        false
+    }
+}
 
 internal fun isPhoneValid(phone: String): Boolean =
     phone.isBlank() || Regex("""^\+?[\d\s\-]{6,20}$""").matches(phone)

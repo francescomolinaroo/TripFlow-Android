@@ -16,8 +16,10 @@ import com.tripflow.core.network.auth.ResetPasswordRequest
 import com.tripflow.core.network.auth.UpdateProfileRequest
 import com.tripflow.core.network.auth.VerifyEmailRequest
 import com.tripflow.core.network.auth.UserLookupByKeycloakIdsRequest
-import com.tripflow.core.network.auth.UserLookupRequest
 import com.tripflow.core.network.auth.UserResponse
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.MediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -25,6 +27,9 @@ import retrofit2.HttpException
 
 open class AuthRepository(context: Context? = null) {
     private val tokenStorage = context?.let { TokenStorage(it) }
+
+    // true finché ci sono token salvati: withAuth li cancella quando la sessione viene rifiutata
+    open fun hasSession(): Boolean = tokenStorage?.getAccessToken() != null
 
     open suspend fun checkSession(): Result<UserResponse> {
         if (tokenStorage?.getAccessToken() == null) {
@@ -137,16 +142,27 @@ open class AuthRepository(context: Context? = null) {
         }
     }
 
-    suspend fun refreshToken(): Boolean {
-        return try {
-            val refreshToken = tokenStorage?.getRefreshToken() ?: return false
-            val response = ApiClient.authApi.refresh(
-                RefreshTokenRequest(refreshToken = refreshToken)
-            )
-            tokenStorage.save(response.accessToken, response.refreshToken)
-            true
+    private enum class RefreshResult { OK, REJECTED, UNAVAILABLE }
+
+    // Serializzato tra tutte le istanze: più chiamate che ricevono 401 insieme fanno un solo refresh,
+    // le altre trovano il token già cambiato e riprovano con quello.
+    private suspend fun refreshAfter(failedToken: String): RefreshResult = refreshMutex.withLock {
+        val storage = tokenStorage ?: return RefreshResult.REJECTED
+        val current = storage.getAccessToken() ?: return RefreshResult.REJECTED
+        if (current != failedToken) return RefreshResult.OK
+        val refreshToken = storage.getRefreshToken() ?: return RefreshResult.REJECTED
+        try {
+            val response = ApiClient.authApi.refresh(RefreshTokenRequest(refreshToken = refreshToken))
+            storage.save(response.accessToken, response.refreshToken)
+            RefreshResult.OK
+        } catch (exception: HttpException) {
+            // solo un rifiuto esplicito chiude la sessione; 429 o 5xx sono temporanei
+            if (exception.code() == 400 || exception.code() == 401) RefreshResult.REJECTED
+            else RefreshResult.UNAVAILABLE
+        } catch (exception: CancellationException) {
+            throw exception
         } catch (exception: Exception) {
-            false
+            RefreshResult.UNAVAILABLE
         }
     }
 
@@ -178,38 +194,52 @@ open class AuthRepository(context: Context? = null) {
         }
     }
 
-    suspend fun lookupUsers(emails: List<String>): Result<List<PublicUserResponse>> =
-        withAuth { token ->
-            ApiClient.authApi.lookupUsers(token, UserLookupRequest(emails))
-        }
-
     suspend fun lookupUsersByKeycloakIds(keycloakIds: List<String>): Result<List<PublicUserResponse>> =
         withAuth { token ->
             ApiClient.authApi.lookupUsersByKeycloakIds(token, UserLookupByKeycloakIdsRequest(keycloakIds))
         }
 
     // Esegue il blocco con il token corrente; in caso di 401 tenta il refresh e riprova una volta.
+    // La sessione locale si chiude solo se il refresh viene rifiutato o il nuovo token dà ancora 401:
+    // un errore diverso (400, 429, rete) non deve sloggare l'utente.
     private suspend fun <T> withAuth(block: suspend (bearerToken: String) -> T): Result<T> {
         val token = tokenStorage?.getAccessToken()
             ?: return Result.failure(IllegalStateException("Sessione non disponibile"))
         return try {
             Result.success(block("Bearer $token"))
         } catch (exception: HttpException) {
-            if (exception.response()?.code() == 401 && refreshToken()) {
-                val refreshed = tokenStorage.getAccessToken()
-                    ?: return Result.failure(IllegalStateException("Sessione non disponibile"))
-                try {
-                    Result.success(block("Bearer $refreshed"))
-                } catch (retryException: Exception) {
+            if (exception.code() != 401) return Result.failure(exception)
+            when (refreshAfter(token)) {
+                RefreshResult.REJECTED -> {
                     logout()
-                    Result.failure(retryException)
+                    Result.failure(exception)
                 }
-            } else {
-                if (exception.response()?.code() == 401) logout()
-                Result.failure(exception)
+                RefreshResult.UNAVAILABLE -> Result.failure(exception)
+                RefreshResult.OK -> retryWithNewToken(block)
             }
+        } catch (exception: CancellationException) {
+            throw exception
         } catch (exception: Exception) {
             Result.failure(exception)
         }
+    }
+
+    private suspend fun <T> retryWithNewToken(block: suspend (bearerToken: String) -> T): Result<T> {
+        val refreshed = tokenStorage?.getAccessToken()
+            ?: return Result.failure(IllegalStateException("Sessione non disponibile"))
+        return try {
+            Result.success(block("Bearer $refreshed"))
+        } catch (exception: HttpException) {
+            if (exception.code() == 401) logout()
+            Result.failure(exception)
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
+            Result.failure(exception)
+        }
+    }
+
+    private companion object {
+        val refreshMutex = Mutex()
     }
 }

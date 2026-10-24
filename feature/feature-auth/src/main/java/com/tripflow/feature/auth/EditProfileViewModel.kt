@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tripflow.core.auth.AuthRepository
+import com.tripflow.core.auth.userMessage
 import com.tripflow.core.network.auth.UpdateProfileRequest
 import com.tripflow.core.network.auth.UserResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,6 +39,10 @@ data class EditProfileUiState(
     val savedUser: UserResponse? = null,
     val isAccountDeleted: Boolean = false,
     val showDeleteDialog: Boolean = false,
+    // password cambiata: la sessione è già chiusa, la schermata mostra l'avviso e torna al login
+    val passwordChanged: Boolean = false,
+    // la data di nascita si imposta una volta sola (il backend rifiuta le modifiche)
+    val dateOfBirthLocked: Boolean = false,
 )
 
 @HiltViewModel
@@ -47,21 +52,19 @@ class EditProfileViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(EditProfileUiState())
     val uiState = _uiState.asStateFlow()
-    private var initialized = false
 
+    // Chiamata a ogni apertura della schermata: riparte dai dati salvati, scartando modifiche
+    // non confermate e password digitate in una visita precedente.
     fun init(user: UserResponse) {
-        if (initialized) return
-        initialized = true
-        _uiState.update {
-            it.copy(
-                firstName = user.firstName,
-                lastName = user.lastName,
-                email = user.email,
-                dateOfBirth = user.dateOfBirth.orEmpty(),
-                phoneNumber = user.phoneNumber.orEmpty(),
-                profileImage = user.profileImage.orEmpty(),
-            )
-        }
+        _uiState.value = EditProfileUiState(
+            firstName = user.firstName,
+            lastName = user.lastName,
+            email = user.email,
+            dateOfBirth = user.dateOfBirth.orEmpty(),
+            phoneNumber = user.phoneNumber.orEmpty(),
+            profileImage = user.profileImage.orEmpty(),
+            dateOfBirthLocked = !user.dateOfBirth.isNullOrBlank(),
+        )
     }
 
     fun onFirstNameChange(value: String) {
@@ -83,12 +86,13 @@ class EditProfileViewModel @Inject constructor(
     }
 
     fun onDateOfBirthChange(value: String) {
+        if (_uiState.value.dateOfBirthLocked) return
         val error = if (!isDateOfBirthValid(value)) "Formato non valido: usa AAAA-MM-GG" else null
         _uiState.update { it.copy(dateOfBirth = value, dateOfBirthError = error) }
     }
 
     fun onPhoneNumberChange(value: String) {
-        val error = if (value.isNotBlank() && value.length !in 7..20) "Numero di telefono non valido (7-20 cifre)" else null
+        val error = if (!isPhoneValid(value)) "Numero di telefono non valido" else null
         _uiState.update { it.copy(phoneNumber = value, phoneError = error) }
     }
 
@@ -120,7 +124,7 @@ class EditProfileViewModel @Inject constructor(
             val result = repository.uploadAvatar(uri, context)
             result.fold(
                 onSuccess = { url -> _uiState.update { it.copy(isUploadingAvatar = false, profileImage = url, successMessage = "Immagine del profilo caricata!") } },
-                onFailure = { error -> _uiState.update { it.copy(isUploadingAvatar = false, errorMessage = error.message ?: "Errore durante il caricamento dell'immagine") } }
+                onFailure = { error -> _uiState.update { it.copy(isUploadingAvatar = false, errorMessage = error.userMessage("Errore durante il caricamento dell'immagine")) } }
             )
         }
     }
@@ -152,18 +156,29 @@ class EditProfileViewModel @Inject constructor(
                     firstName = state.firstName,
                     lastName = state.lastName,
                     dateOfBirth = state.dateOfBirth.ifBlank { null },
-                    phoneNumber = state.phoneNumber.ifBlank { null },
-                    profileImage = state.profileImage.ifBlank { null }
+                    phoneNumber = state.phoneNumber.ifBlank { null }
                 )
             )
             if (profileResult.isFailure) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = profileResult.exceptionOrNull()?.message ?: "Profilo non aggiornato") }
+                val error = profileResult.exceptionOrNull()
+                _uiState.update { it.copy(isLoading = false, errorMessage = error?.userMessage("Profilo non aggiornato") ?: "Profilo non aggiornato") }
                 return@launch
             }
             if (state.newPassword.isNotBlank()) {
                 val passwordResult = repository.changePassword(state.currentPassword, state.newPassword)
                 if (passwordResult.isSuccess) {
-                    _uiState.update { it.copy(isLoading = false, successMessage = "Profilo e password aggiornati", savedUser = profileResult.getOrThrow()) }
+                    // il backend ha chiuso tutte le sessioni: i token locali non valgono più
+                    repository.logout()
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            currentPassword = "",
+                            newPassword = "",
+                            confirmPassword = "",
+                            successMessage = PASSWORD_CHANGED_MESSAGE,
+                            passwordChanged = true
+                        )
+                    }
                 } else {
                     _uiState.update { it.copy(isLoading = false, currentPasswordError = "Password attuale errata o non valida", errorMessage = "Password non aggiornata: verifica la password attuale") }
                 }
@@ -179,12 +194,17 @@ class EditProfileViewModel @Inject constructor(
             val result = repository.deleteAccount()
             result.fold(
                 onSuccess = { _uiState.update { it.copy(isLoading = false, isAccountDeleted = true) } },
-                onFailure = { error -> _uiState.update { it.copy(isLoading = false, errorMessage = error.message ?: "Account non eliminato") } }
+                onFailure = { error -> _uiState.update { it.copy(isLoading = false, errorMessage = error.userMessage("Account non eliminato")) } }
             )
         }
     }
 
     fun onNavigated() {
-        _uiState.update { it.copy(savedUser = null, isAccountDeleted = false) }
+        _uiState.update { it.copy(savedUser = null, isAccountDeleted = false, passwordChanged = false) }
+    }
+
+    companion object {
+        const val PASSWORD_CHANGED_MESSAGE =
+            "Password aggiornata con successo. Verrai disconnesso: accedi di nuovo con la nuova password."
     }
 }

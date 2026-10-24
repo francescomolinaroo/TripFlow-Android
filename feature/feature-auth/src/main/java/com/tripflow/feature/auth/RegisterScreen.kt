@@ -220,7 +220,7 @@ fun RegisterScreen(
                         value = displayDateOfBirth,
                         onValueChange = {},
                         label = "Data di nascita",
-                        placeholder = "Seleziona data di nascita",
+                        placeholder = "Non potrai modificarla in seguito",
                         error = state.dateOfBirthError,
                         isValid = state.dateOfBirth.isNotEmpty() && state.dateOfBirthError == null,
                         trailing = {

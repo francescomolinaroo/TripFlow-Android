@@ -26,19 +26,24 @@ class UserDashboardViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(UserDashboardUiState())
     val uiState = _uiState.asStateFlow()
 
-    init {
-        loadProfile()
-    }
-
+    // Chiamata a ogni ingresso nella schermata (non solo alla creazione), così dopo una modifica
+    // del profilo si vedono i dati aggiornati. Se ci sono già dati, restano visibili durante il refresh.
     fun loadProfile() {
         viewModelScope.launch {
-            _uiState.update { it.copy(profileState = UiState.Loading) }
+            if (_uiState.value.profileState !is UiState.Success) {
+                _uiState.update { it.copy(profileState = UiState.Loading) }
+            }
             val result = repository.getMe()
             result.fold(
                 onSuccess = { user ->
                     _uiState.update { it.copy(profileState = UiState.Success(user)) }
                 },
                 onFailure = { error ->
+                    // refresh fallito per un errore temporaneo (rete, 5xx) con la sessione ancora
+                    // valida: si tengono i dati già mostrati invece di rimandare al login
+                    if (_uiState.value.profileState is UiState.Success && repository.hasSession()) {
+                        return@fold
+                    }
                     _uiState.update {
                         it.copy(
                             profileState = UiState.Error(error.message ?: "Profilo non disponibile"),

@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.tripflow.core.auth.AuthRepository
 import com.tripflow.core.network.auth.UserResponse
+import com.tripflow.core.ui.theme.LocalSessionKey
 import com.tripflow.core.ui.theme.TripFlowTheme
 import com.tripflow.feature.booking.ui.BookingDetailScreen
 import com.tripflow.feature.booking.ui.BookingListScreen
@@ -60,6 +61,8 @@ class MainActivity : ComponentActivity() {
                 var loginSuccessMessage by remember { mutableStateOf<String?>(null) }
                 // email trasportata tra le schermate di auth (registrazione→verifica, recupero→reset)
                 var authEmail by remember { mutableStateOf("") }
+                // cambia a ogni login/logout: forza i ViewModel con dati utente a ricrearsi
+                var sessionId by remember { mutableIntStateOf(0) }
 
                 LaunchedEffect(Unit) {
                     val sessionResult = authRepository.checkSession()
@@ -95,6 +98,7 @@ class MainActivity : ComponentActivity() {
 
                 val tabs = tabsFor(currentUser)
                 val selectedTab = tabOf(currentScreen, reviewListTripId)
+                CompositionLocalProvider(LocalSessionKey provides sessionId.toString()) {
                 Scaffold(
                     contentWindowInsets = WindowInsets(0),
                     bottomBar = {
@@ -172,6 +176,7 @@ class MainActivity : ComponentActivity() {
                             "itinerary_list" -> MyItinerariesScreen(onCreateNewClick = { /* TODO */ })
                             "login" -> LoginScreen(
                                 onLoginClick = { user ->
+                                    sessionId++
                                     currentUser = user
                                     loginSuccessMessage = null
                                     currentScreen = "discover"
@@ -185,6 +190,7 @@ class MainActivity : ComponentActivity() {
                                     currentScreen = "forgot_password"
                                 },
                                 onContinueWithoutLogin = {
+                                    sessionId++
                                     currentUser = null
                                     loginSuccessMessage = null
                                     currentScreen = "discover"
@@ -253,11 +259,15 @@ class MainActivity : ComponentActivity() {
                             )
                             "dashboard" -> UserDashboardScreen(
                                 onLogoutClick = {
+                                    sessionId++
                                     currentUser = null
+                                    editingUser = null
                                     currentScreen = "login"
                                 },
                                 onSessionExpired = {
+                                    sessionId++
                                     currentUser = null
+                                    editingUser = null
                                     currentScreen = "login"
                                 },
                                 onEditProfileClick = { user ->
@@ -283,8 +293,16 @@ class MainActivity : ComponentActivity() {
                                         currentScreen = "dashboard"
                                     },
                                     onAccountDeleted = {
+                                        sessionId++
                                         currentUser = null
                                         editingUser = null
+                                        currentScreen = "login"
+                                    },
+                                    onPasswordChanged = {
+                                        sessionId++
+                                        currentUser = null
+                                        editingUser = null
+                                        loginSuccessMessage = "Password aggiornata: accedi con la nuova password"
                                         currentScreen = "login"
                                     }
                                 )
@@ -308,6 +326,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     }
+                }
                 }
             }
         }

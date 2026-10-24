@@ -15,6 +15,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tripflow.core.ui.component.StateHost
 import com.tripflow.core.ui.theme.Dimens
+import com.tripflow.core.ui.theme.LocalSessionKey
 import com.tripflow.core.ui.theme.TripFlowColors
 import com.tripflow.core.ui.theme.TripFlowTheme
 import com.tripflow.feature.review.ui.components.ReviewHeader
@@ -25,7 +26,7 @@ import com.tripflow.feature.review.ui.components.ReviewItem
 fun ReviewListScreen(
     oggettoId: String? = null,
     onBackClick: () -> Unit = {},
-    viewModel: ReviewListViewModel = viewModel(key = oggettoId ?: "mie") { ReviewListViewModel(oggettoId) }
+    viewModel: ReviewListViewModel = viewModel(key = "${oggettoId ?: "mie"}-${LocalSessionKey.current}") { ReviewListViewModel(oggettoId) }
 ) {
     val uiState by viewModel.uiState.collectAsState()
 

@@ -40,12 +40,13 @@ import com.tripflow.core.ui.component.Status
 import com.tripflow.core.ui.component.StatusChip
 import com.tripflow.core.ui.component.UserBadge
 import com.tripflow.core.ui.theme.Dimens
+import com.tripflow.core.ui.theme.LocalSessionKey
 import com.tripflow.core.ui.theme.TripFlowColors
 import com.tripflow.core.ui.theme.TripFlowTheme
 
 @Composable
 fun UserDashboardScreen(
-    viewModel: UserDashboardViewModel = hiltViewModel(),
+    viewModel: UserDashboardViewModel = hiltViewModel(key = "dashboard-${LocalSessionKey.current}"),
     onBackClick: (() -> Unit)? = null,
     onLogoutClick: () -> Unit = {},
     onSessionExpired: () -> Unit = {},
@@ -57,6 +58,8 @@ fun UserDashboardScreen(
     onCreateTripClick: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) { viewModel.loadProfile() }
 
     LaunchedEffect(state.isLoggedOut) {
         if (state.isLoggedOut) {

@@ -36,6 +36,23 @@ class ResetPasswordViewModelTest {
     }
 
     @Test
+    fun `rientrare nella schermata azzera il reset precedente`() = runTest {
+        repository.resetPasswordResult = Result.success(Unit)
+        viewModel.setEmail("mario@example.com")
+        viewModel.onCodeChange("123456")
+        viewModel.onNewPasswordChange("password8")
+        viewModel.onConfirmPasswordChange("password8")
+        viewModel.resetPassword()
+        advanceUntilIdle()
+
+        viewModel.setEmail("mario@example.com")
+
+        assertFalse(viewModel.uiState.value.isCompleted)
+        assertEquals("", viewModel.uiState.value.code)
+        assertEquals("", viewModel.uiState.value.newPassword)
+    }
+
+    @Test
     fun `codice incompleto blocca il reset`() = runTest {
         viewModel.setEmail("mario@example.com")
         viewModel.onCodeChange("12")

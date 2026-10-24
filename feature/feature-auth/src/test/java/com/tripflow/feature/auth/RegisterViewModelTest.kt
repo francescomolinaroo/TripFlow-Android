@@ -43,6 +43,20 @@ class RegisterViewModelTest {
     }
 
     @Test
+    fun `dopo la navigazione il form viene svuotato`() = runTest {
+        repository.registerResult = Result.success(RegisterResponse(UUID.randomUUID(), "mario@example.com", true))
+        fillValidForm()
+        viewModel.register()
+        advanceUntilIdle()
+
+        viewModel.onNavigated()
+
+        assertFalse(viewModel.uiState.value.isRegistered)
+        assertEquals("", viewModel.uiState.value.email)
+        assertEquals("", viewModel.uiState.value.password)
+    }
+
+    @Test
     fun `errore 409 produce messaggio su email gia registrata`() = runTest {
         repository.registerResult = Result.failure(RuntimeException("HTTP 409"))
         fillValidForm()

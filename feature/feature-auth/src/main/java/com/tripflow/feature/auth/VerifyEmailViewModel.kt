@@ -29,8 +29,10 @@ class VerifyEmailViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(VerifyEmailUiState())
     val uiState = _uiState.asStateFlow()
 
+    // Chiamata a ogni ingresso nella schermata: il ViewModel vive quanto l'Activity, e senza
+    // azzerare lo stato un isVerified rimasto a true salterebbe la verifica dell'account successivo.
     fun setEmail(email: String) {
-        _uiState.update { it.copy(email = email) }
+        _uiState.value = VerifyEmailUiState(email = email)
     }
 
     fun onCodeChange(value: String) {

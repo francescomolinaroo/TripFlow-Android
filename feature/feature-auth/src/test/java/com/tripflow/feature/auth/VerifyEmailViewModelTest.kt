@@ -34,6 +34,22 @@ class VerifyEmailViewModelTest {
     }
 
     @Test
+    fun `rientrare nella schermata azzera lo stato della verifica precedente`() = runTest {
+        repository.verifyEmailResult = Result.success(Unit)
+        viewModel.setEmail("primo@example.com")
+        viewModel.onCodeChange("123456")
+        viewModel.verify()
+        advanceUntilIdle()
+
+        viewModel.setEmail("secondo@example.com")
+
+        // altrimenti la schermata richiamerebbe subito onVerified senza codice
+        assertFalse(viewModel.uiState.value.isVerified)
+        assertEquals("", viewModel.uiState.value.code)
+        assertEquals("secondo@example.com", viewModel.uiState.value.email)
+    }
+
+    @Test
     fun `codice incompleto non chiama il repository`() = runTest {
         viewModel.setEmail("mario@example.com")
         viewModel.onCodeChange("123")

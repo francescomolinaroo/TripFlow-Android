@@ -1,5 +1,6 @@
 package com.tripflow.feature.auth
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -50,6 +51,7 @@ import com.tripflow.core.ui.component.SecondaryButton
 import com.tripflow.core.ui.component.TripFlowTextField
 import com.tripflow.core.ui.component.UserBadge
 import com.tripflow.core.ui.theme.Dimens
+import com.tripflow.core.ui.theme.LocalSessionKey
 import com.tripflow.core.ui.theme.TripFlowColors
 import com.tripflow.core.ui.theme.TripFlowTheme
 import kotlinx.coroutines.delay
@@ -62,10 +64,11 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun EditProfileScreen(
     user: UserResponse,
-    viewModel: EditProfileViewModel = hiltViewModel(),
+    viewModel: EditProfileViewModel = hiltViewModel(key = "edit-profile-${LocalSessionKey.current}"),
     onBackClick: () -> Unit = {},
     onSaved: (UserResponse) -> Unit = {},
-    onAccountDeleted: () -> Unit = {}
+    onAccountDeleted: () -> Unit = {},
+    onPasswordChanged: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -96,6 +99,17 @@ fun EditProfileScreen(
         }
     }
 
+    // blocca il "indietro" di sistema mentre si mostra l'avviso: la sessione è già chiusa
+    BackHandler(enabled = state.passwordChanged) {}
+
+    LaunchedEffect(state.passwordChanged) {
+        if (state.passwordChanged) {
+            delay(2500) // tempo per leggere l'avviso prima di tornare al login
+            viewModel.onNavigated()
+            onPasswordChanged()
+        }
+    }
+
     LaunchedEffect(state.isAccountDeleted) {
         if (state.isAccountDeleted) {
             viewModel.onNavigated()
@@ -119,7 +133,7 @@ fun EditProfileScreen(
             verticalArrangement = Arrangement.spacedBy(Dimens.gapM)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBackClick) {
+                IconButton(onClick = onBackClick, enabled = !state.passwordChanged) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
                 }
                 Text("Modifica profilo", style = MaterialTheme.typography.headlineSmall)
@@ -157,21 +171,30 @@ fun EditProfileScreen(
                     label = "Email",
                     enabled = false
                 )
-                Box(modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true }) {
+                if (state.dateOfBirthLocked) {
                     TripFlowTextField(
                         value = displayDateOfBirth,
                         onValueChange = {},
-                        label = "Data di nascita",
-                        placeholder = "Seleziona data di nascita",
-                        error = state.dateOfBirthError,
-                        isValid = state.dateOfBirth.isNotBlank() && state.dateOfBirthError == null,
-                        trailing = {
-                            IconButton(onClick = { showDatePicker = true }) {
-                                Icon(Icons.Default.CalendarMonth, contentDescription = "Seleziona data", tint = TripFlowColors.TextSecondary)
-                            }
-                        }
+                        label = "Data di nascita (non modificabile)",
+                        enabled = false
                     )
-                    Box(modifier = Modifier.matchParentSize().clickable { showDatePicker = true })
+                } else {
+                    Box(modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true }) {
+                        TripFlowTextField(
+                            value = displayDateOfBirth,
+                            onValueChange = {},
+                            label = "Data di nascita",
+                            placeholder = "Una volta salvata non potrai modificarla",
+                            error = state.dateOfBirthError,
+                            isValid = state.dateOfBirth.isNotBlank() && state.dateOfBirthError == null,
+                            trailing = {
+                                IconButton(onClick = { showDatePicker = true }) {
+                                    Icon(Icons.Default.CalendarMonth, contentDescription = "Seleziona data", tint = TripFlowColors.TextSecondary)
+                                }
+                            }
+                        )
+                        Box(modifier = Modifier.matchParentSize().clickable { showDatePicker = true })
+                    }
                 }
                 TripFlowTextField(
                     value = state.phoneNumber,
@@ -221,9 +244,11 @@ fun EditProfileScreen(
                 Text(state.successMessage.orEmpty(), color = TripFlowColors.Success)
             }
 
-            PrimaryButton(text = "Salva modifiche", onClick = viewModel::save, enabled = !state.isLoading && !state.isUploadingAvatar, loading = state.isLoading)
-            SecondaryButton(text = "Annulla", onClick = onBackClick, enabled = !state.isLoading)
-            DangerButton(text = "Elimina account", onClick = { viewModel.onShowDeleteDialogChange(true) }, enabled = !state.isLoading)
+            // dopo il cambio password la sessione è chiusa: niente altre azioni fino al login
+            val actionsEnabled = !state.isLoading && !state.passwordChanged
+            PrimaryButton(text = "Salva modifiche", onClick = viewModel::save, enabled = actionsEnabled && !state.isUploadingAvatar, loading = state.isLoading)
+            SecondaryButton(text = "Annulla", onClick = onBackClick, enabled = actionsEnabled)
+            DangerButton(text = "Elimina account", onClick = { viewModel.onShowDeleteDialogChange(true) }, enabled = actionsEnabled)
             Spacer(modifier = Modifier.height(Dimens.gapS))
         }
     }

@@ -1,7 +1,6 @@
 ﻿package com.tripflow.core.network
 
 import com.tripflow.core.network.auth.AuthApi
-import com.tripflow.core.network.auth.KeycloakApi
 import com.tripflow.core.network.catalog.CatalogApi
 import com.tripflow.core.network.review.ReviewApi
 import okhttp3.OkHttpClient
@@ -38,14 +37,6 @@ object ApiClient {
     fun <T> create(service: Class<T>): T = retrofit.create(service)
 
     val authApi: AuthApi by lazy { retrofit.create(AuthApi::class.java) }
-
-    val keycloakApi: KeycloakApi by lazy {
-        Retrofit.Builder()
-            .baseUrl("http://10.0.2.2:9090/")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(KeycloakApi::class.java)
-    }
 
     val catalogApi: CatalogApi by lazy { retrofit.create(CatalogApi::class.java) }
 

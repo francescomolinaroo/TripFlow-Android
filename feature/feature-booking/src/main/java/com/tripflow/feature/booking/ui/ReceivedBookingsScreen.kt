@@ -36,6 +36,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tripflow.core.ui.component.InfoChip
 import com.tripflow.core.ui.component.StateHost
 import com.tripflow.core.ui.theme.Dimens
+import com.tripflow.core.ui.theme.LocalSessionKey
 import com.tripflow.core.ui.theme.TripFlowColors
 import com.tripflow.core.ui.theme.TripFlowTheme
 import com.tripflow.feature.booking.model.StatoPrenotazione
@@ -54,7 +55,7 @@ private val filtriStato = listOf(
 fun ReceivedBookingsScreen(
     onBack: (() -> Unit)? = null,
     onBookingClick: (String) -> Unit = {},
-    viewModel: ReceivedBookingsViewModel = viewModel()
+    viewModel: ReceivedBookingsViewModel = viewModel(key = "received-bookings-${LocalSessionKey.current}")
 ) {
     val uiState by viewModel.uiState.collectAsState()
 

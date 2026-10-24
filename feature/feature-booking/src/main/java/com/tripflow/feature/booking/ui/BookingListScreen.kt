@@ -29,6 +29,7 @@ import com.tripflow.core.ui.component.StateHost
 import com.tripflow.core.ui.component.Status
 import com.tripflow.core.ui.component.StatusChip
 import com.tripflow.core.ui.theme.Dimens
+import com.tripflow.core.ui.theme.LocalSessionKey
 import com.tripflow.core.ui.theme.TripFlowColors
 import com.tripflow.core.ui.theme.TripFlowTheme
 import com.tripflow.feature.booking.ui.components.BookingCard
@@ -38,7 +39,7 @@ fun BookingListScreen(
     onBookingClick: (String) -> Unit = {},
     onWriteReviewClick: (BookingUi) -> Unit = {},
     onPayClick: (String) -> Unit = {},
-    viewModel: BookingListViewModel = viewModel()
+    viewModel: BookingListViewModel = viewModel(key = "booking-list-${LocalSessionKey.current}")
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val tabs = listOf("Attive", "Tutte")

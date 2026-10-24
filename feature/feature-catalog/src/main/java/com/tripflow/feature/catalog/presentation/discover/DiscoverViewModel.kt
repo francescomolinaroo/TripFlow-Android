@@ -39,10 +39,11 @@ class DiscoverViewModel(
 
     init {
         loadTrips()
-        loadUser()
     }
 
-    private fun loadUser() {
+    // Chiamata a ogni ingresso nella schermata: nome e avatar nell'intestazione restano
+    // aggiornati anche dopo una modifica del profilo.
+    fun loadUser() {
         if (authRepository == null) return
         viewModelScope.launch {
             authRepository.getMe().onSuccess { user ->

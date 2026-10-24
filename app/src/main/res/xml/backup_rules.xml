@@ -1,13 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Backup per Android 11 e precedenti.
+   I token sono in EncryptedSharedPreferences, cifrate con una chiave del Keystore che non
+   viene salvata nel backup: ripristinate su un altro dispositivo non si decifrerebbero e
+   l'app andrebbe in crash all'avvio. Meglio rifare il login.
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <exclude domain="sharedpref" path="tripflow_auth_secure.xml" />
 </full-backup-content>

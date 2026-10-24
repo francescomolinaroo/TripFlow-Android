@@ -41,6 +41,7 @@ import com.tripflow.core.model.UiState
 import com.tripflow.core.ui.component.PrimaryButton
 import com.tripflow.core.ui.component.StateHost
 import com.tripflow.core.ui.theme.Dimens
+import com.tripflow.core.ui.theme.LocalSessionKey
 import com.tripflow.core.ui.theme.TripFlowColors
 import com.tripflow.core.ui.theme.TripFlowTheme
 import com.tripflow.feature.itinerary.model.MyItinerary
@@ -49,7 +50,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyItinerariesScreen(
-    viewModel: MyItinerariesViewModel = viewModel(),
+    viewModel: MyItinerariesViewModel = viewModel(key = "my-itineraries-${LocalSessionKey.current}"),
     onItineraryClick: (MyItinerary) -> Unit = {},
     onCreateNewClick: () -> Unit = {}
 ) {

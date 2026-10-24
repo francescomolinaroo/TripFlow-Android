@@ -39,12 +39,13 @@ import com.tripflow.core.ui.component.PrimaryButton
 import com.tripflow.core.ui.component.SecondaryButton
 import com.tripflow.core.ui.component.TripFlowTextField
 import com.tripflow.core.ui.theme.Dimens
+import com.tripflow.core.ui.theme.LocalSessionKey
 import com.tripflow.core.ui.theme.TripFlowColors
 import com.tripflow.core.ui.theme.TripFlowTheme
 
 @Composable
 fun LoginScreen(
-    viewModel: LoginViewModel = hiltViewModel(),
+    viewModel: LoginViewModel = hiltViewModel(key = "login-${LocalSessionKey.current}"),
     onLoginClick: (UserResponse) -> Unit = {},
     onRegisterClick: () -> Unit = {},
     onForgotPasswordClick: () -> Unit = {},

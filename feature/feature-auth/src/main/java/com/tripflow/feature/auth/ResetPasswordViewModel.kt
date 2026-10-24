@@ -33,8 +33,9 @@ class ResetPasswordViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ResetPasswordUiState())
     val uiState = _uiState.asStateFlow()
 
+    // Chiamata a ogni ingresso nella schermata: azzera codice, password e isCompleted del giro precedente.
     fun setEmail(email: String) {
-        _uiState.update { it.copy(email = email) }
+        _uiState.value = ResetPasswordUiState(email = email)
     }
 
     fun onCodeChange(value: String) {

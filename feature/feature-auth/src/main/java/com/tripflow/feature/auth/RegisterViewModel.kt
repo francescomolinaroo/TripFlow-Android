@@ -145,7 +145,9 @@ class RegisterViewModel @Inject constructor(
         }
     }
 
+    // Dopo la registrazione il form si svuota: il ViewModel vive quanto l'Activity e
+    // altrimenti la prossima apertura mostrerebbe dati e password dell'account appena creato.
     fun onNavigated() {
-        _uiState.update { it.copy(isRegistered = false) }
+        _uiState.value = RegisterUiState()
     }
 }

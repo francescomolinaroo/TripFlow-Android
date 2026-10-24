@@ -60,12 +60,6 @@ interface AuthApi {
     @GET("user-auth-service/api/auth/users/{id}")
     suspend fun getPublicUserById(@Path("id") id: String): PublicUserResponse
 
-    @POST("user-auth-service/api/auth/users/lookup")
-    suspend fun lookupUsers(
-        @Header("Authorization") authorization: String,
-        @Body request: UserLookupRequest
-    ): List<PublicUserResponse>
-
     @POST("user-auth-service/api/auth/users/lookup-by-ids")
     suspend fun lookupUsersByKeycloakIds(
         @Header("Authorization") authorization: String,

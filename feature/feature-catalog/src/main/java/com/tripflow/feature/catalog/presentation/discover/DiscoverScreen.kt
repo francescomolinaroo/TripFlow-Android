@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -34,6 +35,7 @@ import com.tripflow.core.ui.component.TripFlowTextField
 import com.tripflow.core.ui.component.UserBadge
 import com.tripflow.core.ui.format.Formatters
 import com.tripflow.core.ui.theme.Dimens
+import com.tripflow.core.ui.theme.LocalSessionKey
 import com.tripflow.feature.catalog.data.repository.CatalogRepositoryImpl
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -52,6 +54,7 @@ class DiscoverViewModelFactory(private val context: Context) : ViewModelProvider
 @Composable
 fun DiscoverScreen(
     viewModel: DiscoverViewModel = viewModel(
+        key = "discover-${LocalSessionKey.current}",
         factory = DiscoverViewModelFactory(LocalContext.current.applicationContext)
     ),
     onTripClick: (String) -> Unit,
@@ -62,6 +65,8 @@ fun DiscoverScreen(
     val filters by viewModel.filters.collectAsState()
     val userName by viewModel.userName.collectAsState()
     val userImageUrl by viewModel.userImageUrl.collectAsState()
+
+    LaunchedEffect(Unit) { viewModel.loadUser() }
 
     Column(
         modifier = Modifier

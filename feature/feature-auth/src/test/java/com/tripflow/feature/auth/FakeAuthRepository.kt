@@ -27,6 +27,9 @@ class FakeAuthRepository : AuthRepository() {
     var resetPasswordCalledWith: Triple<String, String, String>? = null
     var resendVerificationCalledWith: String? = null
     var logoutCalled = false
+    var hasSessionResult = false
+
+    override fun hasSession(): Boolean = hasSessionResult
 
     override suspend fun login(email: String, password: String): Result<UserResponse> {
         loginCalledWith = email to password
