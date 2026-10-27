@@ -46,6 +46,9 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // L'activity parte con il tema di avvio (fondo verde): si torna al tema normale
+        // prima di creare il contenuto, così il verde resta solo durante l'avvio.
+        setTheme(R.style.Theme_TripFlow)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val authRepository = AuthRepository(this)
@@ -185,7 +188,8 @@ class MainActivity : ComponentActivity() {
                                     loginSuccessMessage = null
                                     currentScreen = "register"
                                 },
-                                onForgotPasswordClick = {
+                                onForgotPasswordClick = { email ->
+                                    authEmail = email
                                     loginSuccessMessage = null
                                     currentScreen = "forgot_password"
                                 },
@@ -203,6 +207,7 @@ class MainActivity : ComponentActivity() {
                                 successMessage = loginSuccessMessage
                             )
                             "forgot_password" -> ForgotPasswordScreen(
+                                initialEmail = authEmail,
                                 onBackClick = { currentScreen = "login" },
                                 onSuccess = { email ->
                                     authEmail = email

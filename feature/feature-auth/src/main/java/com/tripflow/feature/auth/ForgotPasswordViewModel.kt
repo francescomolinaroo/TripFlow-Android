@@ -27,8 +27,10 @@ class ForgotPasswordViewModel @Inject constructor(
     val uiState = _uiState.asStateFlow()
 
     // Chiamata a ogni ingresso nella schermata, che altrimenti riaprirebbe già in stato "inviato".
-    fun reset() {
+    // Riparte dall'email scritta nel login, così non va riscritta (resta modificabile).
+    fun reset(initialEmail: String = "") {
         _uiState.value = ForgotPasswordUiState()
+        if (initialEmail.isNotBlank()) onEmailChange(initialEmail.trim())
     }
 
     fun onEmailChange(value: String) {

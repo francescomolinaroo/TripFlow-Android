@@ -2,4 +2,10 @@
 <resources>
 
     <style name="Theme.TripFlow" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Tema mostrato solo mentre l'app si avvia: fondo verde del logo con l'icona al centro.
+         MainActivity passa a Theme.TripFlow prima di disegnare il contenuto. -->
+    <style name="Theme.TripFlow.Starting">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+    </style>
 </resources>

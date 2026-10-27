@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Da Android 12 la schermata di avvio la disegna il sistema: qui si sceglie il colore
+         di fondo, che è lo stesso verde dello sfondo dell'icona. -->
+    <style name="Theme.TripFlow.Starting">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="android:windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+    </style>
+</resources>

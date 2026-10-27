@@ -45,6 +45,39 @@ class ForgotPasswordViewModelTest {
     }
 
     @Test
+    fun `reset riparte dall'email del login e la invia senza riscriverla`() = runTest {
+        repository.forgotPasswordResult = Result.success(Unit)
+        viewModel.onEmailChange("altro@example.com")
+
+        viewModel.reset(" mario@example.com ")
+        assertEquals("mario@example.com", viewModel.uiState.value.email)
+        assertNull(viewModel.uiState.value.emailError)
+
+        viewModel.submit()
+        advanceUntilIdle()
+        assertEquals("mario@example.com", repository.forgotPasswordCalledWith)
+    }
+
+    @Test
+    fun `reset senza email lascia il campo vuoto e senza errori`() = runTest {
+        viewModel.onEmailChange("mario@example.com")
+
+        viewModel.reset()
+
+        assertEquals("", viewModel.uiState.value.email)
+        assertNull(viewModel.uiState.value.emailError)
+        assertFalse(viewModel.uiState.value.isSubmitted)
+    }
+
+    @Test
+    fun `reset con email non valida la mostra con l'errore`() = runTest {
+        viewModel.reset("mario@")
+
+        assertEquals("mario@", viewModel.uiState.value.email)
+        assertNotNull(viewModel.uiState.value.emailError)
+    }
+
+    @Test
     fun `fallimento imposta errorMessage`() = runTest {
         repository.forgotPasswordResult = Result.failure(RuntimeException("500"))
         viewModel.onEmailChange("mario@example.com")

@@ -25,5 +25,3 @@ internal fun isDateOfBirthValid(date: String): Boolean {
     }
 }
 
-internal fun isPhoneValid(phone: String): Boolean =
-    phone.isBlank() || Regex("""^\+?[\d\s\-]{6,20}$""").matches(phone)

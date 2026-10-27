@@ -43,6 +43,48 @@ class RegisterViewModelTest {
     }
 
     @Test
+    fun `telefono con prefisso predefinito inviato in formato E164`() = runTest {
+        repository.registerResult = Result.success(RegisterResponse(UUID.randomUUID(), "mario@example.com", true))
+        fillValidForm()
+        assertEquals("+39", viewModel.uiState.value.phonePrefix)
+
+        viewModel.onPhoneNumberChange("+39 333-123 4567x")
+        assertEquals("393331234567", viewModel.uiState.value.phoneNumber)
+        viewModel.onPhoneNumberChange("333 123 4567")
+        viewModel.register()
+        advanceUntilIdle()
+
+        assertEquals("+393331234567", repository.registerCalledWith?.phoneNumber)
+    }
+
+    @Test
+    fun `telefono vuoto non viene inviato, prefisso scelto viene usato`() = runTest {
+        repository.registerResult = Result.success(RegisterResponse(UUID.randomUUID(), "mario@example.com", true))
+        fillValidForm()
+        viewModel.register()
+        advanceUntilIdle()
+        assertNull(repository.registerCalledWith?.phoneNumber)
+
+        viewModel.onPhonePrefixChange("+33")
+        viewModel.onPhoneNumberChange("612345678")
+        viewModel.register()
+        advanceUntilIdle()
+        assertEquals("+33612345678", repository.registerCalledWith?.phoneNumber)
+    }
+
+    @Test
+    fun `numero troppo corto blocca la registrazione`() = runTest {
+        fillValidForm()
+
+        viewModel.onPhoneNumberChange("12345")
+        viewModel.register()
+        advanceUntilIdle()
+
+        assertEquals(ERRORE_NUMERO, viewModel.uiState.value.phoneError)
+        assertNull(repository.registerCalledWith)
+    }
+
+    @Test
     fun `dopo la navigazione il form viene svuotato`() = runTest {
         repository.registerResult = Result.success(RegisterResponse(UUID.randomUUID(), "mario@example.com", true))
         fillValidForm()

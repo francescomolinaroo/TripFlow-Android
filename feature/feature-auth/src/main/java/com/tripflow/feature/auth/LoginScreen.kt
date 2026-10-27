@@ -1,6 +1,8 @@
 ﻿package com.tripflow.feature.auth
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -48,7 +50,7 @@ fun LoginScreen(
     viewModel: LoginViewModel = hiltViewModel(key = "login-${LocalSessionKey.current}"),
     onLoginClick: (UserResponse) -> Unit = {},
     onRegisterClick: () -> Unit = {},
-    onForgotPasswordClick: () -> Unit = {},
+    onForgotPasswordClick: (email: String) -> Unit = {},
     onContinueWithoutLogin: () -> Unit = {},
     onNeedsVerification: (email: String) -> Unit = {},
     successMessage: String? = null
@@ -95,25 +97,17 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = Dimens.screenPadding, vertical = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(Dimens.gapM)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Dimens.gapM)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AccountCircle,
-                    contentDescription = null,
-                    tint = TripFlowColors.Accent,
-                    modifier = Modifier
-                        .background(TripFlowColors.AccentSoft, RoundedCornerShape(14.dp))
-                        .padding(12.dp)
-                )
-                Text("TripFlow", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            }
+            AuthHeader(imageRes = R.drawable.bg_login_montagna)
 
-            Spacer(modifier = Modifier.height(Dimens.gapL))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = Dimens.screenPadding)
+                    .padding(top = Dimens.gapS, bottom = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(Dimens.gapM)
+            ) {
             Text("Bentornato", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
             Text(
                 "Accedi per vedere le tue prenotazioni e i tuoi itinerari.",
@@ -148,7 +142,7 @@ fun LoginScreen(
                 horizontalArrangement = Arrangement.End
             ) {
                 TextButton(
-                    onClick = onForgotPasswordClick,
+                    onClick = { onForgotPasswordClick(state.email.trim()) },
                     enabled = !state.isLoading
                 ) {
                     Text(
@@ -178,7 +172,7 @@ fun LoginScreen(
                 enabled = !state.isLoading
             )
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(Dimens.gapL))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
@@ -188,6 +182,7 @@ fun LoginScreen(
                 TextButton(onClick = onRegisterClick, enabled = !state.isLoading) {
                     Text("Registrati", color = TripFlowColors.Accent, fontWeight = FontWeight.Bold)
                 }
+            }
             }
         }
     }

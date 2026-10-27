@@ -20,6 +20,7 @@ data class EditProfileUiState(
     val lastName: String = "",
     val email: String = "",
     val dateOfBirth: String = "",
+    val phonePrefix: String = PREFISSO_PREDEFINITO,
     val phoneNumber: String = "",
     val profileImage: String = "",
     val currentPassword: String = "",
@@ -56,12 +57,16 @@ class EditProfileViewModel @Inject constructor(
     // Chiamata a ogni apertura della schermata: riparte dai dati salvati, scartando modifiche
     // non confermate e password digitate in una visita precedente.
     fun init(user: UserResponse) {
+        // il numero salvato (+393331234567, o in un formato vecchio) torna diviso in prefisso e numero
+        val (phonePrefix, phoneNumber) = dividiTelefono(user.phoneNumber)
         _uiState.value = EditProfileUiState(
             firstName = user.firstName,
             lastName = user.lastName,
             email = user.email,
             dateOfBirth = user.dateOfBirth.orEmpty(),
-            phoneNumber = user.phoneNumber.orEmpty(),
+            phonePrefix = phonePrefix,
+            phoneNumber = phoneNumber,
+            phoneError = if (isNumeroValido(phoneNumber)) null else ERRORE_NUMERO,
             profileImage = user.profileImage.orEmpty(),
             dateOfBirthLocked = !user.dateOfBirth.isNullOrBlank(),
         )
@@ -91,9 +96,14 @@ class EditProfileViewModel @Inject constructor(
         _uiState.update { it.copy(dateOfBirth = value, dateOfBirthError = error) }
     }
 
+    fun onPhonePrefixChange(prefix: String) {
+        _uiState.update { it.copy(phonePrefix = prefix) }
+    }
+
     fun onPhoneNumberChange(value: String) {
-        val error = if (!isPhoneValid(value)) "Numero di telefono non valido" else null
-        _uiState.update { it.copy(phoneNumber = value, phoneError = error) }
+        val number = soloCifre(value)
+        val error = if (isNumeroValido(number)) null else ERRORE_NUMERO
+        _uiState.update { it.copy(phoneNumber = number, phoneError = error) }
     }
 
     fun onCurrentPasswordChange(value: String) {
@@ -156,7 +166,7 @@ class EditProfileViewModel @Inject constructor(
                     firstName = state.firstName,
                     lastName = state.lastName,
                     dateOfBirth = state.dateOfBirth.ifBlank { null },
-                    phoneNumber = state.phoneNumber.ifBlank { null }
+                    phoneNumber = componiTelefono(state.phonePrefix, state.phoneNumber)
                 )
             )
             if (profileResult.isFailure) {

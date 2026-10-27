@@ -21,6 +21,7 @@ class FakeAuthRepository : AuthRepository() {
 
     var loginCalledWith: Pair<String, String>? = null
     var registerCalledWith: RegisterRequest? = null
+    var updateProfileCalledWith: UpdateProfileRequest? = null
     var forgotPasswordCalledWith: String? = null
     var changePasswordCalledWith: String? = null
     var verifyEmailCalledWith: Pair<String, String>? = null
@@ -48,8 +49,10 @@ class FakeAuthRepository : AuthRepository() {
 
     override suspend fun getMe(): Result<UserResponse> = getMeResult
 
-    override suspend fun updateProfile(request: UpdateProfileRequest): Result<UserResponse> =
-        updateProfileResult
+    override suspend fun updateProfile(request: UpdateProfileRequest): Result<UserResponse> {
+        updateProfileCalledWith = request
+        return updateProfileResult
+    }
 
     override suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> {
         changePasswordCalledWith = newPassword

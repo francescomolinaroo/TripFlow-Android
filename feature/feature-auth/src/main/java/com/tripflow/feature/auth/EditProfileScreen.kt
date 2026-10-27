@@ -196,14 +196,12 @@ fun EditProfileScreen(
                         Box(modifier = Modifier.matchParentSize().clickable { showDatePicker = true })
                     }
                 }
-                TripFlowTextField(
-                    value = state.phoneNumber,
-                    onValueChange = viewModel::onPhoneNumberChange,
-                    label = "Telefono",
-                    placeholder = "+39 000 000 0000",
-                    error = state.phoneError,
-                    isValid = state.phoneNumber.isNotBlank() && state.phoneError == null,
-                    keyboardType = KeyboardType.Phone
+                CampoTelefono(
+                    prefisso = state.phonePrefix,
+                    numero = state.phoneNumber,
+                    onPrefissoChange = viewModel::onPhonePrefixChange,
+                    onNumeroChange = viewModel::onPhoneNumberChange,
+                    error = state.phoneError
                 )
             }
 

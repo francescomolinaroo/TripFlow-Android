@@ -31,6 +31,55 @@ class EditProfileViewModelTest {
     }
 
     @Test
+    fun `init divide il telefono salvato in prefisso e numero`() {
+        viewModel.init(sampleUser(phoneNumber = "+447911123456"))
+
+        assertEquals("+44", viewModel.uiState.value.phonePrefix)
+        assertEquals("7911123456", viewModel.uiState.value.phoneNumber)
+        assertNull(viewModel.uiState.value.phoneError)
+    }
+
+    @Test
+    fun `numero salvato nel formato vecchio viene riscritto in E164`() = runTest {
+        repository.updateProfileResult = Result.success(sampleUser())
+        viewModel.init(sampleUser(phoneNumber = "333 123 4567"))
+
+        viewModel.save()
+        advanceUntilIdle()
+
+        assertEquals("+393331234567", repository.updateProfileCalledWith?.phoneNumber)
+    }
+
+    @Test
+    fun `cambio prefisso e numero salva il nuovo telefono, numero vuoto lo cancella`() = runTest {
+        repository.updateProfileResult = Result.success(sampleUser())
+        viewModel.init(sampleUser(phoneNumber = "+393331234567"))
+
+        viewModel.onPhonePrefixChange("+41")
+        viewModel.onPhoneNumberChange("79 123 45 67")
+        viewModel.save()
+        advanceUntilIdle()
+        assertEquals("+41791234567", repository.updateProfileCalledWith?.phoneNumber)
+
+        viewModel.onPhoneNumberChange("")
+        viewModel.save()
+        advanceUntilIdle()
+        assertNull(repository.updateProfileCalledWith?.phoneNumber)
+    }
+
+    @Test
+    fun `numero troppo corto blocca il salvataggio`() = runTest {
+        viewModel.init(sampleUser())
+
+        viewModel.onPhoneNumberChange("12345")
+        viewModel.save()
+        advanceUntilIdle()
+
+        assertEquals(ERRORE_NUMERO, viewModel.uiState.value.phoneError)
+        assertNull(repository.updateProfileCalledWith)
+    }
+
+    @Test
     fun `salvataggio riuscito senza password imposta savedUser`() = runTest {
         val updated = sampleUser(firstName = "Anna2")
         repository.updateProfileResult = Result.success(updated)

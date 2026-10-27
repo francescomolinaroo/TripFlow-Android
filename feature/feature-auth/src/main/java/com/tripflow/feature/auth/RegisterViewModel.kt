@@ -17,6 +17,7 @@ data class RegisterUiState(
     val email: String = "",
     val password: String = "",
     val confirmPassword: String = "",
+    val phonePrefix: String = PREFISSO_PREDEFINITO,
     val phoneNumber: String = "",
     val dateOfBirth: String = "",
     val selectedRole: String = "TRAVELER",
@@ -82,11 +83,14 @@ class RegisterViewModel @Inject constructor(
         _uiState.update { it.copy(confirmPassword = value, confirmPasswordError = error) }
     }
 
+    fun onPhonePrefixChange(prefix: String) {
+        _uiState.update { it.copy(phonePrefix = prefix) }
+    }
+
     fun onPhoneNumberChange(value: String) {
-        val error = if (value.isEmpty()) null
-        else if (!isPhoneValid(value)) "Numero di telefono non valido"
-        else null
-        _uiState.update { it.copy(phoneNumber = value, phoneError = error) }
+        val number = soloCifre(value)
+        val error = if (isNumeroValido(number)) null else ERRORE_NUMERO
+        _uiState.update { it.copy(phoneNumber = number, phoneError = error) }
     }
 
     fun onDateOfBirthChange(value: String) {
@@ -110,7 +114,7 @@ class RegisterViewModel @Inject constructor(
                 isPasswordValidForRegister(state.password) &&
                 state.confirmPassword == state.password &&
                 (state.dateOfBirth.isEmpty() || isDateOfBirthValid(state.dateOfBirth)) &&
-                (state.phoneNumber.isEmpty() || isPhoneValid(state.phoneNumber))
+                isNumeroValido(state.phoneNumber)
 
         if (!isValid) {
             _uiState.update { it.copy(errorMessage = "Correggi i campi evidenziati in rosso prima di procedere.") }
@@ -127,7 +131,7 @@ class RegisterViewModel @Inject constructor(
                     password = state.password,
                     role = state.selectedRole,
                     dateOfBirth = state.dateOfBirth.ifBlank { null },
-                    phoneNumber = state.phoneNumber.ifBlank { null }
+                    phoneNumber = componiTelefono(state.phonePrefix, state.phoneNumber)
                 )
             )
             result.fold(

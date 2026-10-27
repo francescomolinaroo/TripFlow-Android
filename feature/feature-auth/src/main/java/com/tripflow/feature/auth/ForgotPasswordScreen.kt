@@ -43,6 +43,7 @@ import com.tripflow.core.ui.theme.TripFlowTheme
 
 @Composable
 fun ForgotPasswordScreen(
+    initialEmail: String = "",
     viewModel: ForgotPasswordViewModel = hiltViewModel(),
     onBackClick: () -> Unit = {},
     onSuccess: (email: String) -> Unit = {}
@@ -50,7 +51,7 @@ fun ForgotPasswordScreen(
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(Unit) { viewModel.reset() }
+    LaunchedEffect(Unit) { viewModel.reset(initialEmail) }
 
     LaunchedEffect(state.errorMessage) {
         state.errorMessage?.let { snackbarHostState.showSnackbar(it) }

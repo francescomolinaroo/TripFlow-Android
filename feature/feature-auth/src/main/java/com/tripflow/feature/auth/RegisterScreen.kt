@@ -133,12 +133,16 @@ fun RegisterScreen(
                 .verticalScroll(rememberScrollState())
                 .imePadding()
                 .navigationBarsPadding()
-                .padding(Dimens.screenPadding),
-            verticalArrangement = Arrangement.spacedBy(Dimens.gapM)
         ) {
-            IconButton(onClick = onBackClick) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Indietro")
-            }
+            AuthHeader(imageRes = R.drawable.bg_register_mare, onBack = onBackClick)
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Dimens.screenPadding)
+                    .padding(bottom = Dimens.screenPadding),
+                verticalArrangement = Arrangement.spacedBy(Dimens.gapM)
+            ) {
             Text("Crea il tuo account", style = MaterialTheme.typography.headlineMedium, color = TripFlowColors.TextPrimary)
             Text("Inserisci i tuoi dati per iniziare a viaggiare con TripFlow.", style = MaterialTheme.typography.bodyMedium, color = TripFlowColors.TextSecondary)
 
@@ -231,14 +235,12 @@ fun RegisterScreen(
                     )
                     Box(modifier = Modifier.matchParentSize().clickable { showDatePicker = true })
                 }
-                TripFlowTextField(
-                    value = state.phoneNumber,
-                    onValueChange = viewModel::onPhoneNumberChange,
-                    label = "Telefono",
-                    placeholder = "+39 000 000 0000",
-                    error = state.phoneError,
-                    isValid = state.phoneNumber.isNotEmpty() && state.phoneError == null,
-                    keyboardType = KeyboardType.Phone
+                CampoTelefono(
+                    prefisso = state.phonePrefix,
+                    numero = state.phoneNumber,
+                    onPrefissoChange = viewModel::onPhonePrefixChange,
+                    onNumeroChange = viewModel::onPhoneNumberChange,
+                    error = state.phoneError
                 )
             }
 
@@ -247,6 +249,7 @@ fun RegisterScreen(
             PrimaryButton(text = "Registrati", onClick = viewModel::register, enabled = !state.isLoading, loading = state.isLoading)
             SecondaryButton(text = "Hai già un account? Accedi", onClick = onLoginClick, enabled = !state.isLoading)
             Spacer(modifier = Modifier.height(Dimens.gapXL))
+            }
         }
     }
 }
