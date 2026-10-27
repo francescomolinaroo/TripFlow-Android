@@ -37,6 +37,7 @@ import com.tripflow.core.ui.format.Formatters
 import com.tripflow.core.ui.theme.Dimens
 import com.tripflow.core.ui.theme.LocalSessionKey
 import com.tripflow.feature.catalog.data.repository.CatalogRepositoryImpl
+import com.tripflow.feature.catalog.data.repository.ReviewRepositoryImpl
 import java.math.BigDecimal
 import java.time.LocalDate
 
@@ -46,6 +47,7 @@ class DiscoverViewModelFactory(private val context: Context) : ViewModelProvider
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         return DiscoverViewModel(
             repository = CatalogRepositoryImpl(),
+            reviewRepository = ReviewRepositoryImpl(),
             authRepository = AuthRepository(context)
         ) as T
     }

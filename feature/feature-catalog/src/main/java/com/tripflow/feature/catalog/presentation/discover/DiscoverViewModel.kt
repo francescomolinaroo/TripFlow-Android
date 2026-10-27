@@ -6,7 +6,13 @@ import com.tripflow.core.auth.AuthRepository
 import com.tripflow.core.model.UiState
 import com.tripflow.core.network.catalog.dto.TripResponseDTO
 import com.tripflow.feature.catalog.data.repository.CatalogRepositoryImpl
+import com.tripflow.feature.catalog.data.repository.ReviewRepositoryImpl
 import com.tripflow.feature.catalog.domain.repository.CatalogRepository
+import com.tripflow.feature.catalog.domain.repository.ReviewRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +28,7 @@ data class DiscoverFilters(
 
 class DiscoverViewModel(
     private val repository: CatalogRepository = CatalogRepositoryImpl(),
+    private val reviewRepository: ReviewRepository = ReviewRepositoryImpl(),
     private val authRepository: AuthRepository? = null
 ) : ViewModel() {
 
@@ -36,6 +43,8 @@ class DiscoverViewModel(
 
     private val _userImageUrl = MutableStateFlow<String?>(null)
     val userImageUrl: StateFlow<String?> = _userImageUrl.asStateFlow()
+
+    private var loadTripsJob: Job? = null
 
     init {
         loadTrips()
@@ -55,7 +64,8 @@ class DiscoverViewModel(
 
     fun loadTrips() {
         _uiState.value = UiState.Loading
-        viewModelScope.launch {
+        loadTripsJob?.cancel()
+        loadTripsJob = viewModelScope.launch {
             val currentFilters = _filters.value
 
             val result = repository.searchTrips(
@@ -69,7 +79,25 @@ class DiscoverViewModel(
                     if (trips.isEmpty()) {
                         _uiState.value = UiState.Empty("Nessun viaggio in partenza trovato.")
                     } else {
-                        _uiState.value = UiState.Success(trips)
+                        // Chiama /media dal FE per ogni card per popolare il rating del viaggio
+                        val tripsWithRatings = coroutineScope {
+                            trips.map { trip ->
+                                async {
+                                    val currentRating = trip.rating
+                                    if (currentRating != null && currentRating > 0.0) {
+                                        trip
+                                    } else {
+                                        val media = reviewRepository.getAverageRating(trip.id).getOrNull()
+                                        if (media != null && media > 0.0) {
+                                            trip.copy(rating = media)
+                                        } else {
+                                            trip
+                                        }
+                                    }
+                                }
+                            }.awaitAll()
+                        }
+                        _uiState.value = UiState.Success(tripsWithRatings)
                     }
                 },
                 onFailure = {

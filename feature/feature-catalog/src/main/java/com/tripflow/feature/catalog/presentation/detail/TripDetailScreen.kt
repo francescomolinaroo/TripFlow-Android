@@ -136,10 +136,15 @@ private fun TripHeaderSection(uiModel: TripDetailUiModel) {
             modifier = Modifier.padding(top = Dimens.gapS)
         ) {
             Text(text = uiModel.destination, style = MaterialTheme.typography.bodyMedium)
-            Spacer(modifier = Modifier.width(Dimens.gapM))
-            Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(text = uiModel.ratingString, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+            if (uiModel.reviews.isNotEmpty()) {
+                Spacer(modifier = Modifier.width(Dimens.gapM))
+                Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(text = uiModel.ratingString, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+            } else {
+                Spacer(modifier = Modifier.width(Dimens.gapM))
+                Text(text = uiModel.ratingString, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
 
         Row(
@@ -190,10 +195,19 @@ private fun ActivityRow(activity: ActivityUiModel) {
 private fun ReviewSectionHeader(uiModel: TripDetailUiModel) {
     Column(modifier = Modifier.padding(horizontal = Dimens.screenPadding)) {
         Text(text = "RECENSIONI", style = MaterialTheme.typography.labelSmall)
-        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = Dimens.gapS, bottom = Dimens.gapM)) {
-            Text(text = uiModel.ratingValue, style = MaterialTheme.typography.headlineLarge)
-            Spacer(modifier = Modifier.width(Dimens.gapS))
-            Text(text = "basata su ${uiModel.reviews.size} recensioni", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 6.dp))
+        if (uiModel.reviews.isNotEmpty()) {
+            Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = Dimens.gapS, bottom = Dimens.gapM)) {
+                Text(text = uiModel.ratingValue, style = MaterialTheme.typography.headlineLarge)
+                Spacer(modifier = Modifier.width(Dimens.gapS))
+                Text(text = "basata su ${uiModel.reviews.size} recensioni", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 6.dp))
+            }
+        } else {
+            Text(
+                text = "Nessuna recensione disponibile per questo viaggio.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = Dimens.gapS, bottom = Dimens.gapM)
+            )
         }
     }
 }
@@ -268,16 +282,17 @@ private fun TripDetailData.toUiModel(): TripDetailUiModel {
     val end = runCatching { LocalDate.parse(t.endDate) }.getOrNull()
     val days = if (start != null && end != null) ChronoUnit.DAYS.between(start, end) else 0
 
-    val avgRating = if (this.reviews.isNotEmpty())
-        this.reviews.map { it.rating }.average()
+    val hasReviews = this.reviews.isNotEmpty()
+    val avgRating = if (hasReviews)
+        this.reviews.map { it.valutazione }.average()
     else 0.0
     val avgRatingStr = "%.1f".format(avgRating)
 
     return TripDetailUiModel(
         title = t.name,
         destination = t.destination,
-        ratingValue = avgRatingStr,
-        ratingString = "$avgRatingStr (${this.reviews.size})",
+        ratingValue = if (hasReviews) avgRatingStr else "-",
+        ratingString = if (hasReviews) "$avgRatingStr (${this.reviews.size})" else "Nessuna recensione",
         dateString = if (start != null && end != null) Formatters.dateRange(start, end) else "",
         durationString = "$days giorni",
         spotsString = "${t.availableSpots} posti",
@@ -290,7 +305,12 @@ private fun TripDetailData.toUiModel(): TripDetailUiModel {
             ActivityUiModel(a.name, a.duration, a.availableSpots, Formatters.money(BigDecimal.valueOf(a.price)))
         } ?: emptyList(),
         reviews = this.reviews.map { r ->
-            ReviewUiModel(r.reviewerName, r.createdAt.take(10), r.rating, r.comment)
+            ReviewUiModel(
+                reviewerName = r.autoreNome ?: "Anonimo",
+                date = r.createdAt?.take(10) ?: "",
+                rating = r.valutazione,
+                comment = r.commento ?: ""
+            )
         }
     )
 }

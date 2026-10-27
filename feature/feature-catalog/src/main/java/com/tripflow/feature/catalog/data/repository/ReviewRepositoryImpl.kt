@@ -6,11 +6,20 @@ import com.tripflow.feature.catalog.domain.repository.ReviewRepository
 
 class ReviewRepositoryImpl : ReviewRepository {
     override suspend fun getReviewsByTripId(tripId: String): Result<List<ReviewResponseDTO>> {
-        return try {
-            val response = ApiClient.reviewApi.getReviewsByTripId(tripId)
-            Result.success(response)
-        } catch (exception: Exception) {
-            Result.failure(exception)
+        return runCatching {
+            ApiClient.reviewApi.getReviewsByTripId(tripId)
+        }
+    }
+
+    override suspend fun getAverageRating(tripId: String): Result<Double> {
+        return runCatching {
+            ApiClient.reviewApi.getAverageRating(tripId)
+        }
+    }
+
+    override suspend fun getReviewCount(tripId: String): Result<Long> {
+        return runCatching {
+            ApiClient.reviewApi.getReviewCount(tripId)
         }
     }
 }

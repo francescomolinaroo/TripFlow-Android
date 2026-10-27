@@ -63,7 +63,7 @@ fun TripCard(
                 fallback = ColorPainter(TripFlowColors.Surface2),
                 modifier = Modifier.fillMaxWidth().height(148.dp),
             )
-            if (trip.rating != null) {
+            if (trip.rating != null && trip.rating > 0.0) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)

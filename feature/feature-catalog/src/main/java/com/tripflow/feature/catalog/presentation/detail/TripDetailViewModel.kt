@@ -39,9 +39,14 @@ class TripDetailViewModel(
             val tripResult = tripDeferred.await()
             val reviewsResult = reviewsDeferred.await()
 
-            tripResult.fold(
-                onSuccess = { trip ->
-                    val reviews = reviewsResult.getOrDefault(emptyList())
+            if (tripResult.isFailure) {
+                _uiState.value = UiState.Error("Impossibile caricare i dettagli del viaggio")
+                return@launch
+            }
+
+            reviewsResult.fold(
+                onSuccess = { reviews ->
+                    val trip = tripResult.getOrThrow()
                     val organizerName = authRepository
                         .getPublicUserByKeycloakId(trip.organizerId)
                         .getOrNull()
@@ -49,8 +54,10 @@ class TripDetailViewModel(
                         ?: "Organizzatore"
                     _uiState.value = UiState.Success(TripDetailData(trip, reviews, organizerName))
                 },
-                onFailure = {
-                    _uiState.value = UiState.Error("impossibile caricare i dettagli del viaggio")
+                onFailure = { error ->
+                    _uiState.value = UiState.Error(
+                        error.message?.takeIf { it.isNotBlank() } ?: "Impossibile caricare le recensioni del viaggio"
+                    )
                 }
             )
         }
