@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tripflow.core.model.UiState
 import com.tripflow.feature.itinerary.model.ItineraryDetail
+import com.tripflow.feature.itinerary.model.Visibility
 import com.tripflow.feature.itinerary.repository.ItineraryRepository
+import com.tripflow.feature.itinerary.session.CurrentUserProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,13 +16,15 @@ import javax.inject.Inject
 
 data class ItineraryDetailActionState(
     val deletingStageId: String? = null,
+    val isUpdatingVisibility: Boolean = false,
     val message: String? = null,
     val errorMessage: String? = null,
 )
 
 @HiltViewModel
 class ItineraryDetailViewModel @Inject constructor(
-    private val repository: ItineraryRepository
+    private val repository: ItineraryRepository,
+    private val currentUserProvider: CurrentUserProvider = CurrentUserProvider.None,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState<ItineraryDetail>>(UiState.Loading)
@@ -94,6 +98,49 @@ class ItineraryDetailViewModel @Inject constructor(
                         it.copy(
                             deletingStageId = null,
                             errorMessage = "Impossibile eliminare la tappa",
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // Solo il proprietario puo' cambiare la visibilita' (il backend risponde 403 agli altri,
+    // anche agli editor con canEdit = true).
+    // Letto una sola volta: il ViewModel vive nella sessione corrente (al logout viene ricreato).
+    private val currentUserId: String? by lazy { currentUserProvider.currentUserId() }
+
+    fun isOwner(detail: ItineraryDetail): Boolean {
+        val userId = currentUserId ?: return false
+        return detail.ownerId != null && detail.ownerId.equals(userId, ignoreCase = true)
+    }
+
+    fun updateVisibility(visibility: Visibility) {
+        val id = itineraryId ?: return
+        val current = (_uiState.value as? UiState.Success)?.data ?: return
+        if (_actionState.value.isUpdatingVisibility || current.visibility == visibility) return
+
+        viewModelScope.launch {
+            _actionState.update { it.copy(isUpdatingVisibility = true, message = null, errorMessage = null) }
+            when (val result = repository.updateVisibility(id, visibility)) {
+                is UiState.Success -> {
+                    _uiState.value = UiState.Success(result.data.sortedByOrder())
+                    _actionState.update {
+                        it.copy(isUpdatingVisibility = false, message = "Visibilita' aggiornata")
+                    }
+                }
+
+                is UiState.Error -> {
+                    _actionState.update {
+                        it.copy(isUpdatingVisibility = false, errorMessage = result.message)
+                    }
+                }
+
+                else -> {
+                    _actionState.update {
+                        it.copy(
+                            isUpdatingVisibility = false,
+                            errorMessage = "Impossibile aggiornare la visibilita'",
                         )
                     }
                 }

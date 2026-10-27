@@ -4,7 +4,9 @@ import com.tripflow.core.model.UiState
 import com.tripflow.feature.itinerary.MainDispatcherRule
 import com.tripflow.feature.itinerary.model.ItineraryDetail
 import com.tripflow.feature.itinerary.repository.FakeItineraryRepository
+import com.tripflow.feature.itinerary.model.Visibility
 import com.tripflow.feature.itinerary.repository.ItineraryRepository
+import com.tripflow.feature.itinerary.session.CurrentUserProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -125,5 +127,47 @@ class ItineraryDetailViewModelTest {
         viewModel.clearActionMessage()
 
         assertNull(viewModel.actionState.value.errorMessage)
+    }
+
+    @Test
+    fun `isOwner is true only for the itinerary owner`() = runTest {
+        val owner = ItineraryDetailViewModel(FakeItineraryRepository(), CurrentUserProvider { "owner-1" })
+        val other = ItineraryDetailViewModel(FakeItineraryRepository(), CurrentUserProvider { "someone-else" })
+        val anonymous = ItineraryDetailViewModel(FakeItineraryRepository())
+        owner.loadItinerary("1")
+        val detail = (owner.uiState.value as UiState.Success<ItineraryDetail>).data
+
+        assertTrue(owner.isOwner(detail))
+        assertFalse(other.isOwner(detail))
+        assertFalse(anonymous.isOwner(detail))
+    }
+
+    @Test
+    fun `updateVisibility updates detail and emits confirmation`() = runTest {
+        val viewModel = ItineraryDetailViewModel(FakeItineraryRepository(), CurrentUserProvider { "owner-1" })
+        viewModel.loadItinerary("1")
+
+        viewModel.updateVisibility(Visibility.PUBLIC)
+
+        val detail = (viewModel.uiState.value as UiState.Success<ItineraryDetail>).data
+        assertEquals(Visibility.PUBLIC, detail.visibility)
+        assertEquals("Visibilita' aggiornata", viewModel.actionState.value.message)
+        assertFalse(viewModel.actionState.value.isUpdatingVisibility)
+    }
+
+    @Test
+    fun `updateVisibility error keeps detail and exposes message`() = runTest {
+        val repository = object : ItineraryRepository by FakeItineraryRepository() {
+            override suspend fun updateVisibility(id: String, visibility: Visibility): UiState<ItineraryDetail> =
+                UiState.Error("Only the owner can perform this action", retryable = false)
+        }
+        val viewModel = ItineraryDetailViewModel(repository, CurrentUserProvider { "owner-1" })
+        viewModel.loadItinerary("1")
+        val before = (viewModel.uiState.value as UiState.Success<ItineraryDetail>).data.visibility
+
+        viewModel.updateVisibility(Visibility.PUBLIC)
+
+        assertEquals(before, (viewModel.uiState.value as UiState.Success<ItineraryDetail>).data.visibility)
+        assertEquals("Only the owner can perform this action", viewModel.actionState.value.errorMessage)
     }
 }

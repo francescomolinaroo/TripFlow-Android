@@ -102,4 +102,22 @@ class MyItinerariesViewModelTest {
 
         assertTrue(initialState is UiState.Loading || initialState is UiState.Success)
     }
+
+    @Test
+    fun `onScreenResumed ignores first resume and reloads afterwards`() = runTest {
+        val fake = FakeItineraryRepository()
+        var calls = 0
+        val counting = object : ItineraryRepository by fake {
+            override suspend fun getMyItineraries() = fake.getMyItineraries().also { calls++ }
+        }
+        val vm = MyItinerariesViewModel(counting)
+        assertEquals(1, calls) // caricamento iniziale (init)
+
+        vm.onScreenResumed() // primo resume: coincide con init, nessuna nuova chiamata
+        assertEquals(1, calls)
+
+        vm.onScreenResumed() // ritorno sulla schermata (es. dopo la creazione)
+        assertEquals(2, calls)
+        assertTrue(vm.uiState.value is UiState.Success)
+    }
 }

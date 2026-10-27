@@ -35,7 +35,7 @@ import com.tripflow.feature.auth.UserDashboardScreen
 import com.tripflow.feature.auth.VerifyEmailScreen
 import com.tripflow.feature.auth.dashboardRole
 import com.tripflow.feature.catalog.presentation.detail.TripDetailScreen
-import com.tripflow.feature.itinerary.ui.myitineraries.MyItinerariesScreen
+import com.tripflow.feature.itinerary.navigation.ItineraryNavHost
 import com.tripflow.feature.review.ui.ReviewListScreen
 import com.tripflow.feature.review.ui.WriteReviewScreen
 import com.tripflow.feature.catalog.presentation.discover.DiscoverScreen
@@ -176,7 +176,7 @@ class MainActivity : ComponentActivity() {
                                 onBack = { currentScreen = "dashboard" },
                                 onCreated = { currentScreen = "discover" }
                             )
-                            "itinerary_list" -> MyItinerariesScreen(onCreateNewClick = { /* TODO */ })
+                            "itinerary_list" -> ItineraryNavHost()
                             "login" -> LoginScreen(
                                 onLoginClick = { user ->
                                     sessionId++

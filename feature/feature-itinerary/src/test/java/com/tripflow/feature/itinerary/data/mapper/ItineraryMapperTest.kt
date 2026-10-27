@@ -106,4 +106,18 @@ class ItineraryMapperTest {
         assertEquals("CUSTOM", customDto.stopType)
         assertEquals("Titolo", customDto.customTitle)
     }
+
+    @Test
+    fun `maps public token of public itineraries`() {
+        val dto = ItineraryResponseDto(
+            id = "7",
+            title = "Sicilia",
+            visibility = "PUBLIC",
+            startDate = "2030-10-01",
+            endDate = "2030-10-10",
+            publicToken = "3f2c7a1e-0000-0000-0000-000000000001",
+        )
+
+        assertEquals("3f2c7a1e-0000-0000-0000-000000000001", ItineraryMapper.toDetail(dto).publicToken)
+    }
 }

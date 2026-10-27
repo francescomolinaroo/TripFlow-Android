@@ -14,7 +14,9 @@ data class ItineraryDetail(
     val stages: List<StageDetail>,
     val totalStages: Int,
     val createdAt: String,
-    val updatedAt: String
+    val updatedAt: String,
+    // Valorizzato solo per gli itinerari PUBLIC: identifica il link pubblico.
+    val publicToken: String? = null
 )
 
 data class StageDetail(

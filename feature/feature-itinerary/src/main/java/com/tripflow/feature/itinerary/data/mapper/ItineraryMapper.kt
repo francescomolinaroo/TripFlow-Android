@@ -68,7 +68,8 @@ object ItineraryMapper {
             stages = dto.stops.map { toStage(it, startDate) },
             totalStages = dto.stops.size,
             createdAt = dto.createdAt.orEmpty(),
-            updatedAt = dto.updatedAt.orEmpty()
+            updatedAt = dto.updatedAt.orEmpty(),
+            publicToken = dto.publicToken
         )
     }
 

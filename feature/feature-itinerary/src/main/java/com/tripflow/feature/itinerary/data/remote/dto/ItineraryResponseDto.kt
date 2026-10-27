@@ -13,7 +13,8 @@ data class ItineraryResponseDto(
     @SerializedName("endDate") val endDate: String? = null,
     @SerializedName("createdAt") val createdAt: String? = null,
     @SerializedName("updatedAt") val updatedAt: String? = null,
-    @SerializedName("stops") val stops: List<StopResponseDto> = emptyList()
+    @SerializedName("stops") val stops: List<StopResponseDto> = emptyList(),
+    @SerializedName("publicToken") val publicToken: String? = null
 )
 
 data class StopResponseDto(

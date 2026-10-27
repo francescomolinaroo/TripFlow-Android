@@ -1,5 +1,6 @@
 package com.tripflow.feature.itinerary.ui.itinerarydetail
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,11 +16,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -44,6 +52,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -72,7 +82,10 @@ fun ItineraryDetailScreen(
     val actionState by viewModel.actionState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var stageToDelete by remember { mutableStateOf<StageDetail?>(null) }
+    var visibilityMenuOpen by remember { mutableStateOf(false) }
+    var confirmMakePrivate by remember { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current
 
     LaunchedEffect(itineraryId) {
         viewModel.loadItinerary(itineraryId)
@@ -96,6 +109,25 @@ fun ItineraryDetailScreen(
 
     val detail = (uiState as? UiState.Success)?.data
     val canEdit = detail?.canEdit != false
+    val isOwner = detail?.let(viewModel::isOwner) == true
+
+    fun requestVisibility(target: Visibility) {
+        visibilityMenuOpen = false
+        // Rendere privato un itinerario condiviso revoca tutte le condivisioni: chiediamo conferma.
+        if (target == Visibility.PRIVATE && detail?.visibility == Visibility.SHARED) {
+            confirmMakePrivate = true
+        } else {
+            viewModel.updateVisibility(target)
+        }
+    }
+
+    val sharePublicLink: (String) -> Unit = { link ->
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, link)
+        }
+        context.startActivity(Intent.createChooser(intent, "Condividi itinerario"))
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -115,6 +147,40 @@ fun ItineraryDetailScreen(
                             contentDescription = "Torna indietro",
                             tint = TripFlowColors.TextPrimary,
                         )
+                    }
+                },
+                actions = {
+                    if (detail != null && isOwner) {
+                        Box {
+                            IconButton(
+                                onClick = { visibilityMenuOpen = true },
+                                enabled = !actionState.isUpdatingVisibility,
+                            ) {
+                                Icon(
+                                    imageVector = detail.visibility.icon(),
+                                    contentDescription = "Cambia visibilita'",
+                                    tint = TripFlowColors.TextPrimary,
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = visibilityMenuOpen,
+                                onDismissRequest = { visibilityMenuOpen = false },
+                            ) {
+                                // SHARED non si sceglie da qui: diventa tale condividendo l'itinerario.
+                                listOf(Visibility.PRIVATE, Visibility.PUBLIC).forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(option.label()) },
+                                        leadingIcon = { Icon(option.icon(), contentDescription = null) },
+                                        trailingIcon = {
+                                            if (detail.visibility == option) {
+                                                Icon(Icons.Filled.Check, contentDescription = "Attuale")
+                                            }
+                                        },
+                                        onClick = { requestVisibility(option) },
+                                    )
+                                }
+                            }
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -150,8 +216,31 @@ fun ItineraryDetailScreen(
                     canEdit = canEdit,
                     onDeleteStage = { stageToDelete = it },
                     onAddStage = onAddStageClick,
+                    onSharePublicLink = sharePublicLink,
                 )
             },
+        )
+    }
+
+    if (confirmMakePrivate) {
+        AlertDialog(
+            onDismissRequest = { confirmMakePrivate = false },
+            title = { Text("Rendere privato l'itinerario?") },
+            text = { Text("Tutte le condivisioni verranno revocate e solo tu potrai vederlo.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmMakePrivate = false
+                    viewModel.updateVisibility(Visibility.PRIVATE)
+                }) {
+                    Text("Rendi privato", color = TripFlowColors.Error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmMakePrivate = false }) { Text("Annulla") }
+            },
+            containerColor = TripFlowColors.Background,
+            titleContentColor = TripFlowColors.TextPrimary,
+            textContentColor = TripFlowColors.TextBody,
         )
     }
 
@@ -197,6 +286,7 @@ private fun DetailContent(
     canEdit: Boolean,
     onDeleteStage: (StageDetail) -> Unit,
     onAddStage: () -> Unit,
+    onSharePublicLink: (String) -> Unit = {},
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -209,7 +299,7 @@ private fun DetailContent(
         verticalArrangement = Arrangement.spacedBy(Dimens.gapM),
     ) {
         item {
-            ItineraryHeader(itinerary)
+            ItineraryHeader(itinerary, onSharePublicLink)
         }
 
         if (itinerary.stages.isEmpty()) {
@@ -234,7 +324,10 @@ private fun DetailContent(
 }
 
 @Composable
-private fun ItineraryHeader(itinerary: ItineraryDetail) {
+private fun ItineraryHeader(
+    itinerary: ItineraryDetail,
+    onSharePublicLink: (String) -> Unit = {},
+) {
     Surface(
         color = TripFlowColors.Surface2,
         shape = RoundedCornerShape(Dimens.radiusCard),
@@ -276,8 +369,48 @@ private fun ItineraryHeader(itinerary: ItineraryDetail) {
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(top = 2.dp),
             )
+            val publicToken = itinerary.publicToken
+            if (itinerary.visibility == Visibility.PUBLIC && !publicToken.isNullOrBlank()) {
+                PublicLinkRow(onShare = { onSharePublicLink(PublicLink.forToken(publicToken)) })
+            }
         }
     }
+}
+
+@Composable
+private fun PublicLinkRow(onShare: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = Dimens.gapS),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Filled.Public,
+                contentDescription = null,
+                tint = TripFlowColors.Accent,
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                text = "Link pubblico attivo",
+                style = MaterialTheme.typography.bodyMedium,
+                color = TripFlowColors.TextBody,
+                modifier = Modifier.padding(start = Dimens.gapS),
+            )
+        }
+        TextButton(onClick = onShare) {
+            Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text("Condividi", modifier = Modifier.padding(start = 4.dp))
+        }
+    }
+}
+
+private fun Visibility.icon(): ImageVector = when (this) {
+    Visibility.PUBLIC -> Icons.Filled.Public
+    Visibility.PRIVATE -> Icons.Filled.Lock
+    Visibility.SHARED -> Icons.Filled.Group
 }
 
 @Composable

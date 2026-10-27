@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -30,13 +31,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.tripflow.core.model.UiState
 import com.tripflow.core.ui.component.PrimaryButton
 import com.tripflow.core.ui.component.StateHost
@@ -50,13 +54,24 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyItinerariesScreen(
-    viewModel: MyItinerariesViewModel = viewModel(key = "my-itineraries-${LocalSessionKey.current}"),
+    viewModel: MyItinerariesViewModel = hiltViewModel(key = "my-itineraries-${LocalSessionKey.current}"),
     onItineraryClick: (MyItinerary) -> Unit = {},
     onCreateNewClick: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Ricarica la lista quando si torna su questa schermata (es. dopo la creazione
+    // di un itinerario o modifiche fatte nel dettaglio).
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.onScreenResumed()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     // Mostra snackbar per errori retryable
     LaunchedEffect(uiState) {
@@ -109,7 +124,7 @@ fun MyItinerariesScreen(
                 icon = { Icon(Icons.Default.Add, contentDescription = "Nuovo itinerario") },
                 text = {
                     Text(
-                        "+ Nuovo itinerario",
+                        "Nuovo itinerario",
                         fontWeight = FontWeight.Medium,
                         fontSize = 14.sp
                     )

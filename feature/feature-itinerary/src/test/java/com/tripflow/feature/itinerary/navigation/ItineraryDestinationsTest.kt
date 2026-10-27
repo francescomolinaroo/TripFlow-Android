@@ -14,4 +14,9 @@ class ItineraryDestinationsTest {
     fun addStageRoutePassesItineraryId() {
         assertEquals("add-stage/42", ItineraryDestinations.addStageRoute("42"))
     }
+
+    @Test
+    fun createRouteIsRegistered() {
+        assertEquals("create", ItineraryDestinations.ROUTE_CREATE)
+    }
 }

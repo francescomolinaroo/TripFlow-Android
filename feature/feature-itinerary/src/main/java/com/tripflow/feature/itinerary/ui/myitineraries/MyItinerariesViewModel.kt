@@ -6,28 +6,38 @@ import com.tripflow.core.model.UiState
 import com.tripflow.feature.itinerary.model.ItinerarySummary
 import com.tripflow.feature.itinerary.model.MyItinerary
 import com.tripflow.feature.itinerary.model.StopPreview
-import com.tripflow.feature.itinerary.repository.FakeItineraryRepository
 import com.tripflow.feature.itinerary.repository.ItineraryRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import javax.inject.Inject
 
-class MyItinerariesViewModel(
-    private val repository: ItineraryRepository = FakeItineraryRepository()
+// Il repository reale (ItineraryRepositoryImpl) arriva da Hilt tramite ItineraryModule.
+// FakeItineraryRepository resta solo per Preview e test, che lo passano esplicitamente.
+@HiltViewModel
+class MyItinerariesViewModel @Inject constructor(
+    private val repository: ItineraryRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState<List<MyItinerary>>>(UiState.Loading)
     val uiState = _uiState.asStateFlow()
+
+    private var loadJob: Job? = null
+    private var hasBeenResumed = false
 
     init {
         loadItineraries()
     }
 
     fun loadItineraries() {
-        viewModelScope.launch {
+        // Un nuovo caricamento annulla quello in corso: vince sempre l'ultimo.
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _uiState.value = UiState.Loading
             _uiState.value = when (val result = repository.getMyItineraries()) {
                 is UiState.Success -> UiState.Success(result.data.map { it.toMyItinerary() })
@@ -35,6 +45,17 @@ class MyItinerariesViewModel(
                 is UiState.Error -> result
                 UiState.Loading -> UiState.Loading
             }
+        }
+    }
+
+    // Chiamato a ogni ON_RESUME della schermata. Il primo resume coincide con il
+    // caricamento di init e viene ignorato; i successivi (ritorno da dettaglio o
+    // creazione) ricaricano la lista, cosi' un itinerario appena creato compare subito.
+    fun onScreenResumed() {
+        if (hasBeenResumed) {
+            loadItineraries()
+        } else {
+            hasBeenResumed = true
         }
     }
 

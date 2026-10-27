@@ -53,7 +53,7 @@ class MyItinerariesScreenTest {
         setScreenContent()
         waitForItineraries()
 
-        composeRule.onNodeWithText("+ Nuovo itinerario", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("Nuovo itinerario", useUnmergedTree = true).assertExists()
     }
 
     @Test

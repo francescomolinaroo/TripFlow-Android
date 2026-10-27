@@ -7,6 +7,8 @@ import com.tripflow.feature.itinerary.data.mapper.ItineraryMapper
 import com.tripflow.feature.itinerary.data.remote.ItineraryApi
 import com.tripflow.feature.itinerary.data.repository.ItineraryRepositoryImpl
 import com.tripflow.feature.itinerary.repository.ItineraryRepository
+import com.tripflow.feature.itinerary.session.CurrentUserProvider
+import com.tripflow.feature.itinerary.session.JwtCurrentUserProvider
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -30,6 +32,11 @@ object ItineraryModule {
         ApiClient.tokenProvider = { tokenStorage.getAccessToken() }
         return ApiClient.create(ItineraryApi::class.java)
     }
+
+    @Provides
+    @Singleton
+    fun provideCurrentUserProvider(tokenStorage: TokenStorage): CurrentUserProvider =
+        JwtCurrentUserProvider(tokenStorage)
 
     @Provides
     @Singleton
