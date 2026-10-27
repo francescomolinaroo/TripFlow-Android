@@ -40,7 +40,11 @@ class MyItinerariesViewModel @Inject constructor(
         loadJob = viewModelScope.launch {
             _uiState.value = UiState.Loading
             _uiState.value = when (val result = repository.getMyItineraries()) {
-                is UiState.Success -> UiState.Success(result.data.map { it.toMyItinerary() })
+                // Lista vuota -> stato Empty: mostra "Nessun itinerario" con il pulsante di creazione
+                // invece di una schermata bianca.
+                is UiState.Success ->
+                    if (result.data.isEmpty()) UiState.Empty(null)
+                    else UiState.Success(result.data.map { it.toMyItinerary() })
                 is UiState.Empty -> UiState.Empty(result.message)
                 is UiState.Error -> result
                 UiState.Loading -> UiState.Loading

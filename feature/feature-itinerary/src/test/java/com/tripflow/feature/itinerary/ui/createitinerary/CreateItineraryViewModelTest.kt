@@ -22,13 +22,14 @@ class CreateItineraryViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
+    private val today = LocalDate.now()
     private val repository = FakeItineraryRepository()
     private val viewModel = CreateItineraryViewModel(repository)
 
     @Test
     fun `createItinerary rejects blank title before calling backend`() = runTest {
-        viewModel.onStartDateChange(LocalDate.of(2026, 11, 1))
-        viewModel.onEndDateChange(LocalDate.of(2026, 11, 5))
+        viewModel.onStartDateChange(today.plusDays(5))
+        viewModel.onEndDateChange(today.plusDays(9))
 
         viewModel.createItinerary()
 
@@ -39,8 +40,8 @@ class CreateItineraryViewModelTest {
     @Test
     fun `createItinerary rejects end date before start date`() = runTest {
         viewModel.onTitleChange("Weekend a Roma")
-        viewModel.onStartDateChange(LocalDate.of(2026, 11, 5))
-        viewModel.onEndDateChange(LocalDate.of(2026, 11, 1))
+        viewModel.onStartDateChange(today.plusDays(9))
+        viewModel.onEndDateChange(today.plusDays(5))
 
         viewModel.createItinerary()
 
@@ -55,8 +56,8 @@ class CreateItineraryViewModelTest {
     fun `createItinerary submits valid data and exposes created id`() = runTest {
         viewModel.onTitleChange("Weekend a Roma")
         viewModel.onDescriptionChange("Tre giorni tra storia e cibo")
-        viewModel.onStartDateChange(LocalDate.of(2026, 11, 1))
-        viewModel.onEndDateChange(LocalDate.of(2026, 11, 5))
+        viewModel.onStartDateChange(today.plusDays(5))
+        viewModel.onEndDateChange(today.plusDays(9))
         viewModel.onVisibilityChange(Visibility.PUBLIC)
 
         viewModel.createItinerary()
@@ -74,7 +75,7 @@ class CreateItineraryViewModelTest {
     @Test
     fun `startNewCreation resets form`() = runTest {
         viewModel.onTitleChange("Bozza")
-        viewModel.onStartDateChange(LocalDate.of(2026, 11, 1))
+        viewModel.onStartDateChange(today.plusDays(5))
 
         viewModel.startNewCreation()
 
@@ -98,8 +99,8 @@ class CreateItineraryViewModelTest {
         }
         val retryViewModel = CreateItineraryViewModel(retryRepository)
         retryViewModel.onTitleChange("Weekend a Roma")
-        retryViewModel.onStartDateChange(LocalDate.of(2026, 11, 1))
-        retryViewModel.onEndDateChange(LocalDate.of(2026, 11, 5))
+        retryViewModel.onStartDateChange(today.plusDays(5))
+        retryViewModel.onEndDateChange(today.plusDays(9))
 
         retryViewModel.createItinerary()
         assertEquals("Servizio non disponibile", retryViewModel.uiState.value.errorMessage)
@@ -110,5 +111,17 @@ class CreateItineraryViewModelTest {
         assertNull(state.errorMessage)
         assertNotNull(state.createdItineraryId)
         assertEquals(false, state.isSubmitting)
+    }
+
+    @Test
+    fun `createItinerary rejects start date in the past`() = runTest {
+        viewModel.onTitleChange("Viaggio passato")
+        viewModel.onStartDateChange(today.minusDays(1))
+        viewModel.onEndDateChange(today.plusDays(2))
+
+        viewModel.createItinerary()
+
+        assertEquals("La data di inizio non può essere nel passato", viewModel.uiState.value.dateError)
+        assertNull(viewModel.uiState.value.createdItineraryId)
     }
 }

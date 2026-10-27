@@ -9,6 +9,8 @@ import com.tripflow.feature.itinerary.data.repository.ItineraryRepositoryImpl
 import com.tripflow.feature.itinerary.repository.ItineraryRepository
 import com.tripflow.feature.itinerary.session.CurrentUserProvider
 import com.tripflow.feature.itinerary.session.JwtCurrentUserProvider
+import com.tripflow.feature.itinerary.session.KeycloakTokenRefresher
+import com.tripflow.feature.itinerary.session.TokenRefresher
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -40,7 +42,13 @@ object ItineraryModule {
 
     @Provides
     @Singleton
+    fun provideTokenRefresher(tokenStorage: TokenStorage): TokenRefresher =
+        KeycloakTokenRefresher(tokenStorage)
+
+    @Provides
+    @Singleton
     fun provideItineraryRepository(
-        api: ItineraryApi
-    ): ItineraryRepository = ItineraryRepositoryImpl(api, ItineraryMapper)
+        api: ItineraryApi,
+        tokenRefresher: TokenRefresher,
+    ): ItineraryRepository = ItineraryRepositoryImpl(api, ItineraryMapper, tokenRefresher)
 }

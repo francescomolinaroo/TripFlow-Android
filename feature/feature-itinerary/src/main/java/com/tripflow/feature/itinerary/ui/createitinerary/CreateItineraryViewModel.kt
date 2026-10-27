@@ -81,6 +81,8 @@ class CreateItineraryViewModel @Inject constructor(
         val dateError = when {
             current.startDate == null -> "Seleziona la data di inizio"
             current.endDate == null -> "Seleziona la data di fine"
+            // Il backend rifiuta date passate (400): lo segnaliamo subito nel form.
+            current.startDate.isBefore(LocalDate.now()) -> "La data di inizio non può essere nel passato"
             current.endDate.isBefore(current.startDate) -> "La data di fine non può precedere quella di inizio"
             else -> null
         }

@@ -120,4 +120,16 @@ class MyItinerariesViewModelTest {
         assertEquals(2, calls)
         assertTrue(vm.uiState.value is UiState.Success)
     }
+
+    @Test
+    fun `empty list is exposed as Empty state`() = runTest {
+        val emptyRepository = object : ItineraryRepository by FakeItineraryRepository() {
+            override suspend fun getMyItineraries() =
+                UiState.Success(emptyList<com.tripflow.feature.itinerary.model.ItinerarySummary>())
+        }
+
+        val vm = MyItinerariesViewModel(emptyRepository)
+
+        assertTrue(vm.uiState.value is UiState.Empty)
+    }
 }
