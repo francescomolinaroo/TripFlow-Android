@@ -1,5 +1,7 @@
 package com.tripflow.feature.catalog.domain.repository
 
+import com.tripflow.core.network.catalog.dto.ActivityRequestDTO
+import com.tripflow.core.network.catalog.dto.ActivityResponseDTO
 import com.tripflow.core.network.catalog.dto.TripRequestDTO
 import com.tripflow.core.network.catalog.dto.TripResponseDTO
 
@@ -15,4 +17,6 @@ interface CatalogRepository {
     suspend fun getTripById(id: String): Result<TripResponseDTO>
 
     suspend fun createTrip(request: TripRequestDTO): Result<TripResponseDTO>
+
+    suspend fun createActivity(request: ActivityRequestDTO): Result<ActivityResponseDTO>
 }

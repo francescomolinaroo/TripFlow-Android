@@ -34,6 +34,7 @@ import com.tripflow.feature.auth.ResetPasswordScreen
 import com.tripflow.feature.auth.UserDashboardScreen
 import com.tripflow.feature.auth.VerifyEmailScreen
 import com.tripflow.feature.auth.dashboardRole
+import com.tripflow.feature.catalog.presentation.addactivity.AddActivityScreen
 import com.tripflow.feature.catalog.presentation.detail.TripDetailScreen
 import com.tripflow.feature.itinerary.navigation.ItineraryNavHost
 import com.tripflow.feature.review.ui.ReviewListScreen
@@ -80,6 +81,7 @@ class MainActivity : ComponentActivity() {
                 BackHandler(enabled = currentScreen !in setOf("discover", "login", "checking_session")) {
                     currentScreen = when (currentScreen) {
                         "booking_form" -> "trip_detail"
+                        "add_activity" -> "trip_detail"
                         "trip_detail" -> "discover"
                         "booking_detail" -> "booking_list"
                         "booking_list" -> "discover"
@@ -124,7 +126,8 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
-                ) { innerPadding ->Surface(
+                ) { innerPadding ->
+                    Surface(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding)
@@ -174,8 +177,27 @@ class MainActivity : ComponentActivity() {
                             )
                             "create_trip" -> CreateTripScreen(
                                 onBack = { currentScreen = "dashboard" },
-                                onCreated = { currentScreen = "discover" }
+                                onCreated = { currentScreen = "discover" },
+                                onTripCreated = { createdTripId ->
+                                    selectedTripId = createdTripId
+                                    currentScreen = "trip_detail"
+                                },
+                                onAddActivity = { createdTripId ->
+                                    selectedTripId = createdTripId
+                                    currentScreen = "add_activity"
+                                }
                             )
+                            "add_activity" -> {
+                                selectedTripId?.let { tripId ->
+                                    AddActivityScreen(
+                                        tripId = tripId,
+                                        onBack = { currentScreen = "trip_detail" },
+                                        onCreated = { currentScreen = "trip_detail" }
+                                    )
+                                } ?: run {
+                                    currentScreen = "discover"
+                                }
+                            }
                             "itinerary_list" -> ItineraryNavHost()
                             "login" -> LoginScreen(
                                 onLoginClick = { user ->
@@ -243,10 +265,15 @@ class MainActivity : ComponentActivity() {
                                 selectedTripId?.let { id ->
                                     TripDetailScreen(
                                         tripId = id,
+                                        isCurrentUserOrganizer = currentUser?.let { dashboardRole(it.role) == DashboardRole.ORGANIZER } ?: false,
                                         onBackClick = { currentScreen = "discover" },
                                         onBookClick = { tripIdToBook ->
                                             selectedTripId = tripIdToBook
                                             currentScreen = "booking_form"
+                                        },
+                                        onAddActivityClick = { tripIdToAdd ->
+                                            selectedTripId = tripIdToAdd
+                                            currentScreen = "add_activity"
                                         }
                                     )
                                 } ?: run {

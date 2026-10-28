@@ -1,5 +1,6 @@
 package com.tripflow.feature.catalog.presentation.detail
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,29 +17,38 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.tripflow.core.auth.AuthRepository
 import com.tripflow.core.model.UiState
 import com.tripflow.core.network.catalog.dto.TripResponseDTO
 import com.tripflow.core.network.review.dto.ReviewResponseDTO
 import com.tripflow.core.ui.component.InfoChip
+import com.tripflow.core.ui.component.PrimaryButton
 import com.tripflow.core.ui.component.StateHost
 import com.tripflow.core.ui.component.UserBadge
 import com.tripflow.core.ui.format.Formatters
 import com.tripflow.core.ui.theme.Dimens
+import com.tripflow.core.ui.theme.TripFlowColors
 import com.tripflow.feature.catalog.data.repository.CatalogRepositoryImpl
 import com.tripflow.feature.catalog.data.repository.ReviewRepositoryImpl
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
-class TripDetailViewModelFactory : ViewModelProvider.Factory {
+class TripDetailViewModelFactory(private val context: Context? = null) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return TripDetailViewModel(CatalogRepositoryImpl(), ReviewRepositoryImpl()) as T
+        return TripDetailViewModel(
+            CatalogRepositoryImpl(),
+            ReviewRepositoryImpl(),
+            AuthRepository(context)
+        ) as T
     }
 }
 
@@ -45,9 +56,14 @@ class TripDetailViewModelFactory : ViewModelProvider.Factory {
 @Composable
 fun TripDetailScreen(
     tripId: String,
-    viewModel: TripDetailViewModel = viewModel(factory = TripDetailViewModelFactory()),
+    viewModel: TripDetailViewModel = viewModel(
+        key = "trip_detail_$tripId",
+        factory = TripDetailViewModelFactory(LocalContext.current.applicationContext)
+    ),
+    isCurrentUserOrganizer: Boolean = false,
     onBackClick: () -> Unit,
-    onBookClick: (String) -> Unit
+    onBookClick: (String) -> Unit,
+    onAddActivityClick: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -80,13 +96,13 @@ fun TripDetailScreen(
             modifier = Modifier.padding(paddingValues)
         ) { data ->
             val uiModel = data.toUiModel()
+            val isOrganizer = data.isOrganizer || isCurrentUserOrganizer
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = Dimens.screenPadding)
             ) {
                 item {
-
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -101,16 +117,75 @@ fun TripDetailScreen(
 
                 item {
                     HorizontalDivider(modifier = Modifier.padding(vertical = Dimens.gapL))
-                    Text(
-                        text = "ATTIVITÀ DISPONIBILI",
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = Dimens.screenPadding)
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Dimens.screenPadding),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "ATTIVITÀ DISPONIBILI",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                        if (isOrganizer) {
+                            TextButton(
+                                onClick = { onAddActivityClick(tripId) },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Aggiungi attività",
+                                    tint = TripFlowColors.Accent,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Aggiungi",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = TripFlowColors.Accent
+                                )
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.height(Dimens.gapM))
                 }
 
-                items(uiModel.activities) { activity ->
-                    ActivityRow(activity)
+                if (uiModel.activities.isEmpty()) {
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = Dimens.screenPadding),
+                            colors = CardDefaults.cardColors(containerColor = TripFlowColors.Surface),
+                            shape = RoundedCornerShape(Dimens.radiusCard)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(Dimens.gapL),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "Nessuna attività programmata per questo viaggio.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TripFlowColors.TextSecondary,
+                                    textAlign = TextAlign.Center
+                                )
+                                if (isOrganizer) {
+                                    Spacer(modifier = Modifier.height(Dimens.gapM))
+                                    PrimaryButton(
+                                        text = "+ Aggiungi la prima attività",
+                                        onClick = { onAddActivityClick(tripId) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    items(uiModel.activities) { activity ->
+                        ActivityRow(activity)
+                    }
                 }
 
                 item {

@@ -1,5 +1,7 @@
 package com.tripflow.core.network.catalog
 
+import com.tripflow.core.network.catalog.dto.ActivityRequestDTO
+import com.tripflow.core.network.catalog.dto.ActivityResponseDTO
 import com.tripflow.core.network.catalog.dto.TripRequestDTO
 import com.tripflow.core.network.catalog.dto.TripResponseDTO
 import retrofit2.http.Body
@@ -32,4 +34,7 @@ interface CatalogApi {
 
     @DELETE("catalog-service/api/v1/trips/{id}")
     suspend fun deleteTrip(@Path("id") id: String)
+
+    @POST("catalog-service/api/v1/activities")
+    suspend fun createActivity(@Body request: ActivityRequestDTO): ActivityResponseDTO
 }
