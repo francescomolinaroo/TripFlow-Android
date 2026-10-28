@@ -7,6 +7,7 @@ data class PrenotazioneResponse(
     val viaggioId: String,
     val titoloViaggio: String?,
     val destinazione: String?,
+    val immagineViaggio: String? = null,
     val dataInizio: String?,
     val dataFine: String?,
     val prezzoUnitarioAlMomentoDelBooking: BigDecimal?,

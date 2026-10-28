@@ -46,6 +46,7 @@ import com.tripflow.core.ui.component.TripFlowTextField
 import com.tripflow.core.ui.theme.Dimens
 import com.tripflow.core.ui.theme.TripFlowColors
 import com.tripflow.core.ui.theme.TripFlowTheme
+import com.tripflow.feature.booking.model.StatoPagamento
 import com.tripflow.feature.booking.ui.components.CountdownBanner
 import com.tripflow.feature.booking.ui.components.Section
 import com.tripflow.feature.booking.ui.components.SummaryRow
@@ -94,10 +95,15 @@ fun BookingDetailScreen(
     }
 
     if (uiState.showCancelDialog) {
+        val daAnnullare = (uiState.booking as? UiState.Success)?.data
+        var testoAnnullamento = "I posti bloccati verranno liberati. L'operazione non si può annullare."
+        if (daAnnullare != null && daAnnullare.paymentStatus == StatoPagamento.COMPLETATO.name) {
+            testoAnnullamento = "Il pagamento di ${daAnnullare.totalPrice} verrà rimborsato e i posti verranno liberati. L'operazione non si può annullare."
+        }
         AlertDialog(
             onDismissRequest = viewModel::onCancelDismiss,
             title = { Text("Annullare la prenotazione?") },
-            text = { Text("I posti bloccati verranno liberati. L'operazione non si può annullare.") },
+            text = { Text(testoAnnullamento) },
             confirmButton = {
                 TextButton(onClick = viewModel::onCancelConfirm) {
                     Text("Annulla prenotazione", color = TripFlowColors.Error)
