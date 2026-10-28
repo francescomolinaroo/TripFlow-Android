@@ -9,6 +9,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -24,12 +28,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.tripflow.core.auth.AuthRepository
 import com.tripflow.core.model.UiState
 import com.tripflow.core.network.catalog.dto.TripResponseDTO
 import com.tripflow.core.network.review.dto.ReviewResponseDTO
+import com.tripflow.core.ui.component.DangerButton
 import com.tripflow.core.ui.component.InfoChip
 import com.tripflow.core.ui.component.PrimaryButton
+import com.tripflow.core.ui.component.SecondaryButton
 import com.tripflow.core.ui.component.StateHost
 import com.tripflow.core.ui.component.UserBadge
 import com.tripflow.core.ui.format.Formatters
@@ -63,13 +70,21 @@ fun TripDetailScreen(
     isCurrentUserOrganizer: Boolean = false,
     onBackClick: () -> Unit,
     onBookClick: (String) -> Unit,
-    onAddActivityClick: (String) -> Unit = {}
+    onAddActivityClick: (String) -> Unit = {},
+    onEditTripClick: (String) -> Unit = {},
+    onTripDeleted: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var deleteError by remember { mutableStateOf<String?>(null) }
+    var isDeleting by remember { mutableStateOf(false) }
 
     LaunchedEffect(tripId) {
         viewModel.loadTripDetails(tripId)
     }
+
+    val currentData = (uiState as? UiState.Success<TripDetailData>)?.data
+    val isOrganizer = currentData?.let { it.isOrganizer || isCurrentUserOrganizer } ?: isCurrentUserOrganizer
 
     Scaffold(
         topBar = {
@@ -80,13 +95,38 @@ fun TripDetailScreen(
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
                     }
                 },
+                actions = {
+                    if (isOrganizer) {
+                        IconButton(onClick = { onEditTripClick(tripId) }) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Modifica viaggio",
+                                tint = TripFlowColors.TextPrimary
+                            )
+                        }
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Elimina viaggio",
+                                tint = TripFlowColors.Error
+                            )
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },
         bottomBar = {
-            if (uiState is UiState.Success) {
-                val data = (uiState as UiState.Success<TripDetailData>).data.toUiModel()
-                BottomBookingBar(price = data.priceString, onBookClick = { onBookClick(tripId) })
+            if (currentData != null) {
+                if (!isOrganizer) {
+                    val data = currentData.toUiModel()
+                    BottomBookingBar(price = data.priceString, onBookClick = { onBookClick(tripId) })
+                } else {
+                    OrganizerBottomBar(
+                        onEditClick = { onEditTripClick(tripId) },
+                        onDeleteClick = { showDeleteDialog = true }
+                    )
+                }
             }
         }
     ) { paddingValues ->
@@ -96,7 +136,6 @@ fun TripDetailScreen(
             modifier = Modifier.padding(paddingValues)
         ) { data ->
             val uiModel = data.toUiModel()
-            val isOrganizer = data.isOrganizer || isCurrentUserOrganizer
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -107,8 +146,36 @@ fun TripDetailScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(250.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                    )
+                            .background(TripFlowColors.Surface2)
+                    ) {
+                        if (!uiModel.imageUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = uiModel.imageUrl,
+                                contentDescription = uiModel.title,
+                                contentScale = ContentScale.Crop,
+                                placeholder = ColorPainter(TripFlowColors.Surface2),
+                                error = ColorPainter(TripFlowColors.Surface2),
+                                fallback = ColorPainter(TripFlowColors.Surface2),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(250.dp)
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(TripFlowColors.Surface2),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Image,
+                                    contentDescription = null,
+                                    tint = TripFlowColors.TextDisabled,
+                                    modifier = Modifier.size(48.dp)
+                                )
+                            }
+                        }
+                    }
                 }
 
                 item {
@@ -197,6 +264,103 @@ fun TripDetailScreen(
                     ReviewRow(review)
                 }
             }
+        }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!isDeleting) showDeleteDialog = false },
+            title = {
+                Text(
+                    text = "Eliminare questo viaggio?",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = TripFlowColors.TextPrimary
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(Dimens.gapS)) {
+                    Text(
+                        text = "Sei sicuro di voler eliminare definitivamente questo viaggio? L'operazione non può essere annullata.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TripFlowColors.TextSecondary
+                    )
+                    if (deleteError != null) {
+                        Text(
+                            text = deleteError!!,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TripFlowColors.Error
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        isDeleting = true
+                        deleteError = null
+                        viewModel.deleteTrip(
+                            tripId = tripId,
+                            onDeleted = {
+                                isDeleting = false
+                                showDeleteDialog = false
+                                onTripDeleted()
+                            },
+                            onError = { err ->
+                                isDeleting = false
+                                deleteError = err
+                            }
+                        )
+                    },
+                    enabled = !isDeleting
+                ) {
+                    Text(
+                        text = if (isDeleting) "Eliminazione..." else "Elimina",
+                        color = TripFlowColors.Error,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteDialog = false },
+                    enabled = !isDeleting
+                ) {
+                    Text("Annulla")
+                }
+            },
+            containerColor = TripFlowColors.Background,
+            tonalElevation = 0.dp
+        )
+    }
+}
+
+@Composable
+private fun OrganizerBottomBar(
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    Surface(
+        shadowElevation = 8.dp,
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Dimens.screenPadding)
+                .navigationBarsPadding(),
+            horizontalArrangement = Arrangement.spacedBy(Dimens.gapM),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SecondaryButton(
+                text = "Modifica viaggio",
+                onClick = onEditClick,
+                modifier = Modifier.weight(1f)
+            )
+            DangerButton(
+                text = "Elimina",
+                onClick = onDeleteClick,
+                modifier = Modifier.weight(0.7f)
+            )
         }
     }
 }
@@ -344,6 +508,7 @@ private data class TripDetailUiModel(
     val organizerName: String,
     val description: String,
     val priceString: String,
+    val imageUrl: String?,
     val activities: List<ActivityUiModel>,
     val reviews: List<ReviewUiModel>
 )
@@ -363,6 +528,11 @@ private fun TripDetailData.toUiModel(): TripDetailUiModel {
     else 0.0
     val avgRatingStr = "%.1f".format(avgRating)
 
+    val coverImage = t.images
+        ?.flatMap { it.split(",") }
+        ?.map { it.trim() }
+        ?.firstOrNull { it.isNotBlank() }
+
     return TripDetailUiModel(
         title = t.name,
         destination = t.destination,
@@ -376,6 +546,7 @@ private fun TripDetailData.toUiModel(): TripDetailUiModel {
         description = t.description ?: "Nessuna descrizione disponibile per questo viaggio.",
 
         priceString = Formatters.money(BigDecimal.valueOf(t.price)),
+        imageUrl = coverImage,
         activities = t.activities?.map { a ->
             ActivityUiModel(a.name, a.duration, a.availableSpots, Formatters.money(BigDecimal.valueOf(a.price)))
         } ?: emptyList(),

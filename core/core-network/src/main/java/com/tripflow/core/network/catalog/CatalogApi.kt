@@ -26,6 +26,9 @@ interface CatalogApi {
     @GET("catalog-service/api/v1/trips/{id}")
     suspend fun getTripById(@Path("id") id: String): TripResponseDTO
 
+    @GET("catalog-service/api/v1/trips/organizer/{id}")
+    suspend fun getTripsByOrganizer(@Path("id") organizerId: String): List<TripResponseDTO>
+
     @POST("catalog-service/api/v1/trips")
     suspend fun createTrip(@Body request: TripRequestDTO): TripResponseDTO
 

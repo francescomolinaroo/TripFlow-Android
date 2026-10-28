@@ -89,6 +89,17 @@ class TripDetailViewModel(
         }
     }
 
+    fun deleteTrip(tripId: String, onDeleted: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            catalogRepository.deleteTrip(tripId).fold(
+                onSuccess = { onDeleted() },
+                onFailure = { e ->
+                    onError(e.message ?: "Impossibile eliminare il viaggio")
+                }
+            )
+        }
+    }
+
     fun refreshAfterActivityAdded() {
         lastTripId?.let { loadTripDetails(it) }
     }

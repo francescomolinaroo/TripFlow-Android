@@ -17,7 +17,9 @@ import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.ListAlt
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,6 +56,7 @@ fun UserDashboardScreen(
     onBookingsClick: () -> Unit = {},
     onReviewsClick: () -> Unit = {},
     onMyTripsClick: () -> Unit = {},
+    onMyOrganizedTripsClick: () -> Unit = {},
     onReceivedBookingsClick: () -> Unit = {},
     onCreateTripClick: () -> Unit = {}
 ) {
@@ -119,7 +122,8 @@ fun UserDashboardScreen(
                     when (role) {
                         DashboardRole.ORGANIZER -> {
                             ProfileAction(icon = Icons.Default.AddCircle, title = "Crea nuovo viaggio", onClick = onCreateTripClick)
-                            ProfileAction(icon = Icons.Default.ListAlt, title = "I miei viaggi e itinerari", onClick = onMyTripsClick)
+                            ProfileAction(icon = Icons.Default.Explore, title = "I miei viaggi", onClick = onMyOrganizedTripsClick)
+                            ProfileAction(icon = Icons.Default.Map, title = "I miei itinerari", onClick = onMyTripsClick)
                             ProfileAction(icon = Icons.Default.CreditCard, title = "Prenotazioni ricevute", onClick = onReceivedBookingsClick)
                         }
                         DashboardRole.TRAVELER -> {
