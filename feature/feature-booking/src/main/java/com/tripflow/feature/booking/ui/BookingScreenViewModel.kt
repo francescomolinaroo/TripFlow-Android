@@ -27,10 +27,6 @@ class BookingScreenViewModel(
     private val _uiState = MutableStateFlow(BookingScreenUiState())
     val uiState: StateFlow<BookingScreenUiState> = _uiState.asStateFlow()
 
-    init {
-        loadTrip()
-    }
-
     fun loadTrip() {
         if (viaggioId == null) {
             _uiState.update {
@@ -93,15 +89,24 @@ class BookingScreenViewModel(
     }
 
     fun onNavigatedToPayment() {
-        _uiState.update { it.copy(createdBookingId = null) }
+        _uiState.value = BookingScreenUiState()
     }
 
     private fun BookingScreenUiState.withTrip(trip: TripResponseDTO): BookingScreenUiState {
         val max = trip.availableSpots.coerceIn(0, MAX_PARTECIPANTI)
+        val giaSelezionate = activities.filter { it.isSelected }.map { it.id }
+        val nuoveAttivita = trip.activities.orEmpty().map { dto ->
+            val attivita = dto.toUi()
+            if (giaSelezionate.contains(attivita.id)) {
+                attivita.copy(isSelected = true)
+            } else {
+                attivita
+            }
+        }
         return copy(
             trip = UiState.Success(trip.toSummaryUi()),
             basePricePerPerson = BigDecimal.valueOf(trip.price).setScale(0, RoundingMode.HALF_UP).toInt(),
-            activities = trip.activities.orEmpty().map { it.toUi() },
+            activities = nuoveAttivita,
             maxParticipants = max,
             participants = participants.coerceIn(1, max.coerceAtLeast(1))
         )

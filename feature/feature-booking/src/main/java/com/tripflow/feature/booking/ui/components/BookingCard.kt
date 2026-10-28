@@ -50,7 +50,7 @@ fun BookingCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             AsyncImage(
-                model = null,
+                model = booking.imageUrl,
                 contentDescription = null,
                 modifier = Modifier
                     .size(64.dp)

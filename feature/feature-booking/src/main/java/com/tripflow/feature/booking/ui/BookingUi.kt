@@ -8,6 +8,7 @@ data class BookingUi(
     val title: String,
     val date: String,
     val location: String,
+    val imageUrl: String? = null,
     val participants: Int,
     val price: Int,
     val status: String,
