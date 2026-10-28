@@ -198,7 +198,7 @@ private fun DiscoverHeader(
                 style = MaterialTheme.typography.headlineMedium
             )
             Text(
-                text = "$tripsCount viaggi in partenza",
+                text = if (tripsCount == 1) "1 viaggio in partenza" else "$tripsCount viaggi in partenza",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

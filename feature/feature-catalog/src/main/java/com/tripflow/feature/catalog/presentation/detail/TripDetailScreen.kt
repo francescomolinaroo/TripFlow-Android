@@ -435,10 +435,11 @@ private fun ReviewSectionHeader(uiModel: TripDetailUiModel) {
     Column(modifier = Modifier.padding(horizontal = Dimens.screenPadding)) {
         Text(text = "RECENSIONI", style = MaterialTheme.typography.labelSmall)
         if (uiModel.reviews.isNotEmpty()) {
+            val countText = if (uiModel.reviews.size == 1) "1 recensione" else "${uiModel.reviews.size} recensioni"
             Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = Dimens.gapS, bottom = Dimens.gapM)) {
                 Text(text = uiModel.ratingValue, style = MaterialTheme.typography.headlineLarge)
                 Spacer(modifier = Modifier.width(Dimens.gapS))
-                Text(text = "basata su ${uiModel.reviews.size} recensioni", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 6.dp))
+                Text(text = "basata su $countText", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 6.dp))
             }
         } else {
             Text(
@@ -463,7 +464,17 @@ private fun ReviewRow(review: ReviewUiModel) {
                 Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(14.dp))
             }
         }
-        Text(text = review.comment, style = MaterialTheme.typography.bodyMedium)
+        if (review.title.isNotBlank()) {
+            Text(
+                text = review.title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 2.dp, bottom = 2.dp)
+            )
+        }
+        if (review.comment.isNotBlank()) {
+            Text(text = review.comment, style = MaterialTheme.typography.bodyMedium)
+        }
     }
 }
 
@@ -514,13 +525,19 @@ private data class TripDetailUiModel(
 )
 
 private data class ActivityUiModel(val name: String, val duration: Int, val spots: Int, val price: String)
-private data class ReviewUiModel(val reviewerName: String, val date: String, val rating: Int, val comment: String)
+private data class ReviewUiModel(
+    val reviewerName: String,
+    val title: String = "",
+    val date: String,
+    val rating: Int,
+    val comment: String
+)
 
 private fun TripDetailData.toUiModel(): TripDetailUiModel {
     val t = this.trip
     val start = runCatching { LocalDate.parse(t.startDate) }.getOrNull()
     val end = runCatching { LocalDate.parse(t.endDate) }.getOrNull()
-    val days = if (start != null && end != null) ChronoUnit.DAYS.between(start, end) else 0
+    val days = if (start != null && end != null) (ChronoUnit.DAYS.between(start, end) + 1).coerceAtLeast(1) else 0
 
     val hasReviews = this.reviews.isNotEmpty()
     val avgRating = if (hasReviews)
@@ -539,7 +556,7 @@ private fun TripDetailData.toUiModel(): TripDetailUiModel {
         ratingValue = if (hasReviews) avgRatingStr else "-",
         ratingString = if (hasReviews) "$avgRatingStr (${this.reviews.size})" else "Nessuna recensione",
         dateString = if (start != null && end != null) Formatters.dateRange(start, end) else "",
-        durationString = "$days giorni",
+        durationString = if (days == 1L) "1 giorno" else if (days > 1L) "$days giorni" else "",
         spotsString = "${t.availableSpots} posti",
         organizerName = this.organizerName,
 
@@ -551,9 +568,12 @@ private fun TripDetailData.toUiModel(): TripDetailUiModel {
             ActivityUiModel(a.name, a.duration, a.availableSpots, Formatters.money(BigDecimal.valueOf(a.price)))
         } ?: emptyList(),
         reviews = this.reviews.map { r ->
+            val parsedDate = r.createdAt?.let { raw -> runCatching { LocalDate.parse(raw.take(10)) }.getOrNull() }
+            val formattedDate = parsedDate?.let { Formatters.date(it) } ?: r.createdAt?.take(10) ?: ""
             ReviewUiModel(
                 reviewerName = r.autoreNome ?: "Anonimo",
-                date = r.createdAt?.take(10) ?: "",
+                title = r.titolo ?: "",
+                date = formattedDate,
                 rating = r.valutazione,
                 comment = r.commento ?: ""
             )
