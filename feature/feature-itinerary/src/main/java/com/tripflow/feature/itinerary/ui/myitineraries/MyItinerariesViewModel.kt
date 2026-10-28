@@ -7,6 +7,7 @@ import com.tripflow.feature.itinerary.model.ItinerarySummary
 import com.tripflow.feature.itinerary.model.MyItinerary
 import com.tripflow.feature.itinerary.model.StopPreview
 import com.tripflow.feature.itinerary.repository.ItineraryRepository
+import com.tripflow.feature.itinerary.session.CurrentUserProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,8 +22,12 @@ import javax.inject.Inject
 // FakeItineraryRepository resta solo per Preview e test, che lo passano esplicitamente.
 @HiltViewModel
 class MyItinerariesViewModel @Inject constructor(
-    private val repository: ItineraryRepository
+    private val repository: ItineraryRepository,
+    private val currentUserProvider: CurrentUserProvider = CurrentUserProvider.None,
 ) : ViewModel() {
+
+    // Codice utente (id Keycloak) da comunicare a chi vuole condividere un itinerario con te.
+    val myUserCode: String? by lazy { currentUserProvider.currentUserId() }
 
     private val _uiState = MutableStateFlow<UiState<List<MyItinerary>>>(UiState.Loading)
     val uiState = _uiState.asStateFlow()

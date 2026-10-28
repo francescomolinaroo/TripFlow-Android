@@ -132,4 +132,14 @@ class MyItinerariesViewModelTest {
 
         assertTrue(vm.uiState.value is UiState.Empty)
     }
+
+    @Test
+    fun `myUserCode exposes the current user id`() = runTest {
+        val vm = MyItinerariesViewModel(
+            FakeItineraryRepository(),
+            com.tripflow.feature.itinerary.session.CurrentUserProvider { "70cd15d7-3a55-407c-9909-1f575e86cbfe" },
+        )
+
+        assertEquals("70cd15d7-3a55-407c-9909-1f575e86cbfe", vm.myUserCode)
+    }
 }

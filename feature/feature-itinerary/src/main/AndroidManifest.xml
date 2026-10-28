@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- "Aggiungi al calendario" con selezione multipla: scrive gli eventi
+         direttamente nel calendario del telefono (chiesto solo quando serve).
+         L'aggiunta di una singola tappa usa invece l'app calendario e non
+         richiede permessi. -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+
+</manifest>

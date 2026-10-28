@@ -256,7 +256,17 @@ class AddStopViewModel @Inject constructor(
         val current = _uiState.value
         if (current.isSubmitting || current.isLoadingContext) return
 
-        val dateError = if (current.date == null) "Seleziona la data della tappa" else null
+        val selectedDate = current.date
+        val rangeStart = current.itineraryStartDate
+        val rangeEnd = current.itineraryEndDate
+        val outOfRange = selectedDate != null &&
+            ((rangeStart != null && selectedDate.isBefore(rangeStart)) || (rangeEnd != null && selectedDate.isAfter(rangeEnd)))
+        val dateError = when {
+            selectedDate == null -> "Seleziona la data della tappa"
+            // Stesso controllo del backend: la tappa deve cadere nel periodo dell'itinerario.
+            outOfRange -> "La data deve essere compresa nel periodo dell'itinerario"
+            else -> null
+        }
         val timeError = validateTimes(current.startTime, current.endTime)
         val customTitleError = if (
             current.stopType == StopType.CUSTOM && current.customTitle.isBlank()
@@ -296,7 +306,8 @@ class AddStopViewModel @Inject constructor(
             StopType.TRIP,
             StopType.ACTIVITY -> StageSource.FromCatalog(
                 catalogItemId = requireNotNull(current.selectedCatalogItem).id,
-                stopType = current.stopType
+                stopType = current.stopType,
+                title = current.selectedCatalogItem.title
             )
         }
         val dayNumber = current.itineraryStartDate

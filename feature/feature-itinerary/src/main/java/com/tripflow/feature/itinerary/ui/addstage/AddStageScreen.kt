@@ -1,5 +1,6 @@
 package com.tripflow.feature.itinerary.ui.addstage
 
+import com.tripflow.feature.itinerary.ui.common.WithItalianLocale
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +24,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.runtime.remember
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -160,6 +163,8 @@ fun AddStageScreen(
     if (showDatePicker) {
         AddStageDatePickerDialog(
             initialDate = state.date,
+            minDate = state.itineraryStartDate,
+            maxDate = state.itineraryEndDate,
             onDismiss = { showDatePicker = false },
             onDateSelected = {
                 viewModel.onDateChange(it)
@@ -576,35 +581,64 @@ private fun ErrorText(message: String) {
 @Composable
 private fun AddStageDatePickerDialog(
     initialDate: LocalDate?,
+    minDate: LocalDate?,
+    maxDate: LocalDate?,
     onDismiss: () -> Unit,
     onDateSelected: (LocalDate) -> Unit,
 ) {
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = initialDate?.toUtcMillis(),
-    )
-
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    datePickerState.selectedDateMillis
-                        ?.toLocalDateUtc()
-                        ?.let(onDateSelected)
+    // Lo stato va creato dentro WithItalianLocale: il DatePicker fissa la lingua alla creazione.
+    WithItalianLocale {
+        // Solo i giorni dell'itinerario sono selezionabili (il backend rifiuta gli altri).
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = initialDate?.toUtcMillis(),
+            initialDisplayedMonthMillis = (initialDate ?: minDate)?.toUtcMillis(),
+            selectableDates = remember(minDate, maxDate) { ItineraryDates(minDate, maxDate) },
+        )
+        DatePickerDialog(
+            onDismissRequest = onDismiss,
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis
+                            ?.toLocalDateUtc()
+                            ?.let(onDateSelected)
+                    },
+                    enabled = datePickerState.selectedDateMillis != null,
+                ) {
+                    Text("Conferma")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("Annulla")
+                }
+            },
+        ) {
+            DatePicker(
+                state = datePickerState,
+                title = {
+                    Text(
+                        text = "Seleziona la data",
+                        modifier = androidx.compose.ui.Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp),
+                    )
                 },
-                enabled = datePickerState.selectedDateMillis != null,
-            ) {
-                Text("Conferma")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Annulla")
-            }
-        },
-    ) {
-        DatePicker(state = datePickerState)
+            )
+        }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+private class ItineraryDates(
+    private val minDate: LocalDate?,
+    private val maxDate: LocalDate?,
+) : SelectableDates {
+    override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+        val date = utcTimeMillis.toLocalDateUtc()
+        return (minDate == null || !date.isBefore(minDate)) && (maxDate == null || !date.isAfter(maxDate))
+    }
+
+    override fun isSelectableYear(year: Int): Boolean =
+        (minDate == null || year >= minDate.year) && (maxDate == null || year <= maxDate.year)
 }
 
 private fun LocalDate.toUtcMillis(): Long =

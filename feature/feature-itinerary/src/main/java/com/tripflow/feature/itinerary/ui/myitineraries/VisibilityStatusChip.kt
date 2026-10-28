@@ -31,9 +31,9 @@ fun VisibilityStatusChip(
     modifier: Modifier = Modifier
 ) {
     val label = when (visibility) {
-        Visibility.PUBLIC -> "PUBLIC"
-        Visibility.PRIVATE -> "PRIVATE"
-        Visibility.SHARED -> "SHARED"
+        Visibility.PUBLIC -> "Pubblico"
+        Visibility.PRIVATE -> "Privato"
+        Visibility.SHARED -> "Condiviso"
     }
     val icon = when (visibility) {
         Visibility.PUBLIC -> Icons.Default.Public

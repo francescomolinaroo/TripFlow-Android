@@ -35,7 +35,6 @@ object ItineraryMapper {
     private val isoDateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     private const val PREVIEW_STAGES = 3
-    private const val CATALOG_STOP_TITLE = "Tappa dal catalogo"
 
     fun toSummary(dto: ItineraryResponseDto): ItinerarySummary {
         val startDate = parseDate(dto.startDate)
@@ -131,7 +130,7 @@ object ItineraryMapper {
             stopType = stopType.name,
             viaggioId = catalogId.takeIf { stopType == StopType.TRIP },
             attivitaId = catalogId.takeIf { stopType == StopType.ACTIVITY },
-            customTitle = custom?.title,
+            customTitle = custom?.title ?: catalog?.title?.takeIf { it.isNotBlank() }?.take(150),
             customDescription = custom?.description,
             startDatetime = combine(domain.date, domain.startTime),
             endDatetime = combine(domain.date, domain.endTime),
@@ -215,8 +214,11 @@ object ItineraryMapper {
         }
     }
 
-    private fun titleFor(stopType: StopType): String {
-        return if (stopType == StopType.CUSTOM) "" else CATALOG_STOP_TITLE
+    // Titolo di ripiego per le tappe da catalogo salvate senza nome (create prima del fix).
+    private fun titleFor(stopType: StopType): String = when (stopType) {
+        StopType.TRIP -> "Viaggio dal catalogo"
+        StopType.ACTIVITY -> "Attività dal catalogo"
+        StopType.CUSTOM -> ""
     }
 
     private fun dayNumber(start: LocalDate?, date: LocalDate?): Int {

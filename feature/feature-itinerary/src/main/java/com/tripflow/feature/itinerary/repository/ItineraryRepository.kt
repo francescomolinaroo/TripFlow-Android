@@ -7,6 +7,7 @@ import com.tripflow.feature.itinerary.model.CatalogSearchResponse
 import com.tripflow.feature.itinerary.model.CreateItineraryRequest
 import com.tripflow.feature.itinerary.model.CreateStageRequest
 import com.tripflow.feature.itinerary.model.ItineraryDetail
+import com.tripflow.feature.itinerary.model.ItineraryShare
 import com.tripflow.feature.itinerary.model.ItinerarySummary
 import com.tripflow.feature.itinerary.model.StageDetail
 import com.tripflow.feature.itinerary.model.UpdateStageRequest
@@ -40,4 +41,15 @@ interface ItineraryRepository {
     suspend fun searchActivities(query: String): UiState<List<CatalogItem>>
 
     suspend fun getCatalogItem(id: UUID): UiState<CatalogItem>
+
+    // Condivisioni con utenti specifici. Implementazione di default per i repository
+    // finti (Preview/test) che non le supportano.
+    suspend fun getShares(itineraryId: String): UiState<List<ItineraryShare>> =
+        UiState.Error("Condivisione non disponibile", retryable = false)
+
+    suspend fun shareItinerary(itineraryId: String, userId: String, canEdit: Boolean): UiState<ItineraryShare> =
+        UiState.Error("Condivisione non disponibile", retryable = false)
+
+    suspend fun removeShare(itineraryId: String, userId: String): UiState<Unit> =
+        UiState.Error("Condivisione non disponibile", retryable = false)
 }
