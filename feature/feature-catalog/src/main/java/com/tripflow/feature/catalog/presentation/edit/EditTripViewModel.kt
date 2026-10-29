@@ -2,6 +2,7 @@ package com.tripflow.feature.catalog.presentation.edit
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tripflow.core.network.NetworkErrorParser
 import com.tripflow.core.network.catalog.dto.TripRequestDTO
 import com.tripflow.feature.catalog.data.repository.CatalogRepositoryImpl
 import com.tripflow.feature.catalog.domain.repository.CatalogRepository
@@ -125,12 +126,12 @@ class EditTripViewModel(
                     }
                 },
                 onFailure = { e ->
-                    val msg = when {
-                        e.message?.contains("401") == true -> "Sessione scaduta, effettua di nuovo il login"
-                        e.message?.contains("403") == true -> "Non hai i permessi per modificare questo viaggio"
-                        e.message?.contains("400") == true -> "Dati non validi: controlla i campi"
-                        else -> e.message ?: "Errore durante l'aggiornamento, riprova"
-                    }
+                    val msg = NetworkErrorParser.getUserMessage(
+                        throwable = e,
+                        fallback400 = "Dati non validi: controlla i campi",
+                        fallback403 = "Non hai i permessi per modificare questo viaggio",
+                        defaultFallback = "Errore durante l'aggiornamento, riprova"
+                    )
                     _form.update { it.copy(isSaving = false, globalError = msg) }
                 }
             )

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.tripflow.core.auth.AuthRepository
 import com.tripflow.core.model.UiState
 import com.tripflow.core.network.ApiClient
+import com.tripflow.core.network.NetworkErrorParser
 import com.tripflow.core.network.catalog.dto.TripResponseDTO
 import com.tripflow.core.network.review.dto.ReviewResponseDTO
 import com.tripflow.feature.catalog.domain.repository.CatalogRepository
@@ -94,7 +95,8 @@ class TripDetailViewModel(
             catalogRepository.deleteTrip(tripId).fold(
                 onSuccess = { onDeleted() },
                 onFailure = { e ->
-                    onError(e.message ?: "Impossibile eliminare il viaggio")
+                    val msg = NetworkErrorParser.getUserMessage(e, defaultFallback = "Impossibile eliminare il viaggio")
+                    onError(msg)
                 }
             )
         }

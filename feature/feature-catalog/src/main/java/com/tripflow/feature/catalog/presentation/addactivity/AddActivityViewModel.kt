@@ -2,6 +2,7 @@ package com.tripflow.feature.catalog.presentation.addactivity
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tripflow.core.network.NetworkErrorParser
 import com.tripflow.core.network.catalog.dto.ActivityRequestDTO
 import com.tripflow.feature.catalog.data.repository.CatalogRepositoryImpl
 import com.tripflow.feature.catalog.domain.repository.CatalogRepository
@@ -77,12 +78,11 @@ class AddActivityViewModel(
                     }
                 },
                 onFailure = { e ->
-                    val msg = when {
-                        e.message?.contains("401") == true -> "Sessione scaduta, effettua di nuovo il login"
-                        e.message?.contains("403") == true -> "Non hai i permessi per aggiungere attività"
-                        e.message?.contains("400") == true -> "Dati non validi: controlla i campi"
-                        else -> e.message ?: "Errore di rete, riprova"
-                    }
+                    val msg = NetworkErrorParser.getUserMessage(
+                        throwable = e,
+                        fallback400 = "Dati non validi: controlla i campi",
+                        fallback403 = "Non hai i permessi per aggiungere attività"
+                    )
                     _form.update { it.copy(isLoading = false, globalError = msg) }
                 }
             )
