@@ -1,5 +1,6 @@
 package com.tripflow.feature.catalog.presentation.detail
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,6 +8,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -14,30 +19,43 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import com.tripflow.core.auth.AuthRepository
 import com.tripflow.core.model.UiState
 import com.tripflow.core.network.catalog.dto.TripResponseDTO
 import com.tripflow.core.network.review.dto.ReviewResponseDTO
+import com.tripflow.core.ui.component.DangerButton
 import com.tripflow.core.ui.component.InfoChip
+import com.tripflow.core.ui.component.PrimaryButton
+import com.tripflow.core.ui.component.SecondaryButton
 import com.tripflow.core.ui.component.StateHost
 import com.tripflow.core.ui.component.UserBadge
 import com.tripflow.core.ui.format.Formatters
 import com.tripflow.core.ui.theme.Dimens
+import com.tripflow.core.ui.theme.TripFlowColors
 import com.tripflow.feature.catalog.data.repository.CatalogRepositoryImpl
 import com.tripflow.feature.catalog.data.repository.ReviewRepositoryImpl
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
-class TripDetailViewModelFactory : ViewModelProvider.Factory {
+class TripDetailViewModelFactory(private val context: Context? = null) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return TripDetailViewModel(CatalogRepositoryImpl(), ReviewRepositoryImpl()) as T
+        return TripDetailViewModel(
+            CatalogRepositoryImpl(),
+            ReviewRepositoryImpl(),
+            AuthRepository(context)
+        ) as T
     }
 }
 
@@ -45,15 +63,28 @@ class TripDetailViewModelFactory : ViewModelProvider.Factory {
 @Composable
 fun TripDetailScreen(
     tripId: String,
-    viewModel: TripDetailViewModel = viewModel(factory = TripDetailViewModelFactory()),
+    viewModel: TripDetailViewModel = viewModel(
+        key = "trip_detail_$tripId",
+        factory = TripDetailViewModelFactory(LocalContext.current.applicationContext)
+    ),
+    isCurrentUserOrganizer: Boolean = false,
     onBackClick: () -> Unit,
-    onBookClick: (String) -> Unit
+    onBookClick: (String) -> Unit,
+    onAddActivityClick: (String) -> Unit = {},
+    onEditTripClick: (String) -> Unit = {},
+    onTripDeleted: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var deleteError by remember { mutableStateOf<String?>(null) }
+    var isDeleting by remember { mutableStateOf(false) }
 
     LaunchedEffect(tripId) {
         viewModel.loadTripDetails(tripId)
     }
+
+    val currentData = (uiState as? UiState.Success<TripDetailData>)?.data
+    val isOrganizer = currentData?.let { it.isOrganizer || isCurrentUserOrganizer } ?: isCurrentUserOrganizer
 
     Scaffold(
         topBar = {
@@ -64,13 +95,38 @@ fun TripDetailScreen(
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
                     }
                 },
+                actions = {
+                    if (isOrganizer) {
+                        IconButton(onClick = { onEditTripClick(tripId) }) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Modifica viaggio",
+                                tint = TripFlowColors.TextPrimary
+                            )
+                        }
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Elimina viaggio",
+                                tint = TripFlowColors.Error
+                            )
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },
         bottomBar = {
-            if (uiState is UiState.Success) {
-                val data = (uiState as UiState.Success<TripDetailData>).data.toUiModel()
-                BottomBookingBar(price = data.priceString, onBookClick = { onBookClick(tripId) })
+            if (currentData != null) {
+                if (!isOrganizer) {
+                    val data = currentData.toUiModel()
+                    BottomBookingBar(price = data.priceString, onBookClick = { onBookClick(tripId) })
+                } else {
+                    OrganizerBottomBar(
+                        onEditClick = { onEditTripClick(tripId) },
+                        onDeleteClick = { showDeleteDialog = true }
+                    )
+                }
             }
         }
     ) { paddingValues ->
@@ -86,13 +142,40 @@ fun TripDetailScreen(
                 contentPadding = PaddingValues(bottom = Dimens.screenPadding)
             ) {
                 item {
-
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(250.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                    )
+                            .background(TripFlowColors.Surface2)
+                    ) {
+                        if (!uiModel.imageUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = uiModel.imageUrl,
+                                contentDescription = uiModel.title,
+                                contentScale = ContentScale.Crop,
+                                placeholder = ColorPainter(TripFlowColors.Surface2),
+                                error = ColorPainter(TripFlowColors.Surface2),
+                                fallback = ColorPainter(TripFlowColors.Surface2),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(250.dp)
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(TripFlowColors.Surface2),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Image,
+                                    contentDescription = null,
+                                    tint = TripFlowColors.TextDisabled,
+                                    modifier = Modifier.size(48.dp)
+                                )
+                            }
+                        }
+                    }
                 }
 
                 item {
@@ -101,16 +184,75 @@ fun TripDetailScreen(
 
                 item {
                     HorizontalDivider(modifier = Modifier.padding(vertical = Dimens.gapL))
-                    Text(
-                        text = "ATTIVITÀ DISPONIBILI",
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = Dimens.screenPadding)
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Dimens.screenPadding),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "ATTIVITÀ DISPONIBILI",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                        if (isOrganizer) {
+                            TextButton(
+                                onClick = { onAddActivityClick(tripId) },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Aggiungi attività",
+                                    tint = TripFlowColors.Accent,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Aggiungi",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = TripFlowColors.Accent
+                                )
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.height(Dimens.gapM))
                 }
 
-                items(uiModel.activities) { activity ->
-                    ActivityRow(activity)
+                if (uiModel.activities.isEmpty()) {
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = Dimens.screenPadding),
+                            colors = CardDefaults.cardColors(containerColor = TripFlowColors.Surface),
+                            shape = RoundedCornerShape(Dimens.radiusCard)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(Dimens.gapL),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "Nessuna attività programmata per questo viaggio.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TripFlowColors.TextSecondary,
+                                    textAlign = TextAlign.Center
+                                )
+                                if (isOrganizer) {
+                                    Spacer(modifier = Modifier.height(Dimens.gapM))
+                                    PrimaryButton(
+                                        text = "+ Aggiungi la prima attività",
+                                        onClick = { onAddActivityClick(tripId) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    items(uiModel.activities) { activity ->
+                        ActivityRow(activity)
+                    }
                 }
 
                 item {
@@ -122,6 +264,103 @@ fun TripDetailScreen(
                     ReviewRow(review)
                 }
             }
+        }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!isDeleting) showDeleteDialog = false },
+            title = {
+                Text(
+                    text = "Eliminare questo viaggio?",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = TripFlowColors.TextPrimary
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(Dimens.gapS)) {
+                    Text(
+                        text = "Sei sicuro di voler eliminare definitivamente questo viaggio? L'operazione non può essere annullata.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TripFlowColors.TextSecondary
+                    )
+                    if (deleteError != null) {
+                        Text(
+                            text = deleteError!!,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TripFlowColors.Error
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        isDeleting = true
+                        deleteError = null
+                        viewModel.deleteTrip(
+                            tripId = tripId,
+                            onDeleted = {
+                                isDeleting = false
+                                showDeleteDialog = false
+                                onTripDeleted()
+                            },
+                            onError = { err ->
+                                isDeleting = false
+                                deleteError = err
+                            }
+                        )
+                    },
+                    enabled = !isDeleting
+                ) {
+                    Text(
+                        text = if (isDeleting) "Eliminazione..." else "Elimina",
+                        color = TripFlowColors.Error,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteDialog = false },
+                    enabled = !isDeleting
+                ) {
+                    Text("Annulla")
+                }
+            },
+            containerColor = TripFlowColors.Background,
+            tonalElevation = 0.dp
+        )
+    }
+}
+
+@Composable
+private fun OrganizerBottomBar(
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    Surface(
+        shadowElevation = 8.dp,
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Dimens.screenPadding)
+                .navigationBarsPadding(),
+            horizontalArrangement = Arrangement.spacedBy(Dimens.gapM),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SecondaryButton(
+                text = "Modifica viaggio",
+                onClick = onEditClick,
+                modifier = Modifier.weight(1f)
+            )
+            DangerButton(
+                text = "Elimina",
+                onClick = onDeleteClick,
+                modifier = Modifier.weight(0.7f)
+            )
         }
     }
 }
@@ -196,10 +435,11 @@ private fun ReviewSectionHeader(uiModel: TripDetailUiModel) {
     Column(modifier = Modifier.padding(horizontal = Dimens.screenPadding)) {
         Text(text = "RECENSIONI", style = MaterialTheme.typography.labelSmall)
         if (uiModel.reviews.isNotEmpty()) {
+            val countText = if (uiModel.reviews.size == 1) "1 recensione" else "${uiModel.reviews.size} recensioni"
             Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = Dimens.gapS, bottom = Dimens.gapM)) {
                 Text(text = uiModel.ratingValue, style = MaterialTheme.typography.headlineLarge)
                 Spacer(modifier = Modifier.width(Dimens.gapS))
-                Text(text = "basata su ${uiModel.reviews.size} recensioni", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 6.dp))
+                Text(text = "basata su $countText", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 6.dp))
             }
         } else {
             Text(
@@ -224,7 +464,17 @@ private fun ReviewRow(review: ReviewUiModel) {
                 Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(14.dp))
             }
         }
-        Text(text = review.comment, style = MaterialTheme.typography.bodyMedium)
+        if (review.title.isNotBlank()) {
+            Text(
+                text = review.title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 2.dp, bottom = 2.dp)
+            )
+        }
+        if (review.comment.isNotBlank()) {
+            Text(text = review.comment, style = MaterialTheme.typography.bodyMedium)
+        }
     }
 }
 
@@ -269,18 +519,25 @@ private data class TripDetailUiModel(
     val organizerName: String,
     val description: String,
     val priceString: String,
+    val imageUrl: String?,
     val activities: List<ActivityUiModel>,
     val reviews: List<ReviewUiModel>
 )
 
 private data class ActivityUiModel(val name: String, val duration: Int, val spots: Int, val price: String)
-private data class ReviewUiModel(val reviewerName: String, val date: String, val rating: Int, val comment: String)
+private data class ReviewUiModel(
+    val reviewerName: String,
+    val title: String = "",
+    val date: String,
+    val rating: Int,
+    val comment: String
+)
 
 private fun TripDetailData.toUiModel(): TripDetailUiModel {
     val t = this.trip
     val start = runCatching { LocalDate.parse(t.startDate) }.getOrNull()
     val end = runCatching { LocalDate.parse(t.endDate) }.getOrNull()
-    val days = if (start != null && end != null) ChronoUnit.DAYS.between(start, end) else 0
+    val days = if (start != null && end != null) (ChronoUnit.DAYS.between(start, end) + 1).coerceAtLeast(1) else 0
 
     val hasReviews = this.reviews.isNotEmpty()
     val avgRating = if (hasReviews)
@@ -288,26 +545,35 @@ private fun TripDetailData.toUiModel(): TripDetailUiModel {
     else 0.0
     val avgRatingStr = "%.1f".format(avgRating)
 
+    val coverImage = t.images
+        ?.flatMap { it.split(",") }
+        ?.map { it.trim() }
+        ?.firstOrNull { it.isNotBlank() }
+
     return TripDetailUiModel(
         title = t.name,
         destination = t.destination,
         ratingValue = if (hasReviews) avgRatingStr else "-",
         ratingString = if (hasReviews) "$avgRatingStr (${this.reviews.size})" else "Nessuna recensione",
         dateString = if (start != null && end != null) Formatters.dateRange(start, end) else "",
-        durationString = "$days giorni",
+        durationString = if (days == 1L) "1 giorno" else if (days > 1L) "$days giorni" else "",
         spotsString = "${t.availableSpots} posti",
         organizerName = this.organizerName,
 
         description = t.description ?: "Nessuna descrizione disponibile per questo viaggio.",
 
         priceString = Formatters.money(BigDecimal.valueOf(t.price)),
+        imageUrl = coverImage,
         activities = t.activities?.map { a ->
             ActivityUiModel(a.name, a.duration, a.availableSpots, Formatters.money(BigDecimal.valueOf(a.price)))
         } ?: emptyList(),
         reviews = this.reviews.map { r ->
+            val parsedDate = r.createdAt?.let { raw -> runCatching { LocalDate.parse(raw.take(10)) }.getOrNull() }
+            val formattedDate = parsedDate?.let { Formatters.date(it) } ?: r.createdAt?.take(10) ?: ""
             ReviewUiModel(
                 reviewerName = r.autoreNome ?: "Anonimo",
-                date = r.createdAt?.take(10) ?: "",
+                title = r.titolo ?: "",
+                date = formattedDate,
                 rating = r.valutazione,
                 comment = r.commento ?: ""
             )

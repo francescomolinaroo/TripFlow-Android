@@ -38,6 +38,7 @@ fun PrenotazioneResponse.toUi(recensita: Boolean = false): BookingUi {
         title = titoloViaggio ?: "Viaggio",
         date = Formatters.dateRange(parseDate(dataInizio), parseDate(dataFine)),
         location = destinazione ?: "—",
+        imageUrl = immagineViaggio,
         participants = numeroPartecipanti,
         price = prezzoTotale.setScale(0, RoundingMode.HALF_UP).toInt(),
         status = stato.name,
@@ -100,7 +101,7 @@ fun PrenotazioneResponse.toDetailUi(vistaOrganizzatore: Boolean = false): Bookin
             title = titoloViaggio ?: "Viaggio",
             date = Formatters.dateRange(parseDate(dataInizio), parseDate(dataFine)),
             location = destinazione ?: "—",
-            imageUrl = null
+            imageUrl = immagineViaggio
         ),
         status = stato.name,
         participants = numeroPartecipanti,

@@ -2,6 +2,7 @@ package com.tripflow.feature.catalog.presentation.create
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tripflow.core.network.catalog.dto.ActivityRequestDTO
 import com.tripflow.core.network.catalog.dto.TripRequestDTO
 import com.tripflow.feature.catalog.data.repository.CatalogRepositoryImpl
 import com.tripflow.feature.catalog.domain.repository.CatalogRepository
@@ -12,6 +13,18 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.UUID
+
+// ─── Draft Activity ──────────────────────────────────────────────────────────
+
+data class DraftActivityItem(
+    val id: String = UUID.randomUUID().toString(),
+    val name: String,
+    val duration: Int,
+    val price: Double,
+    val availableSpots: Int,
+    val description: String? = null
+)
 
 // ─── Form state ──────────────────────────────────────────────────────────────
 
@@ -24,6 +37,7 @@ data class CreateTripFormState(
     val availableSpots: String = "",
     val description: String = "",
     val imagesRaw: String = "",   // URL separati da virgola
+    val activities: List<DraftActivityItem> = emptyList(),
 
     // Errori di campo
     val nameError: String? = null,
@@ -36,6 +50,7 @@ data class CreateTripFormState(
     // Stato submit
     val isLoading: Boolean = false,
     val successMessage: String? = null,
+    val createdTripId: String? = null,
     val globalError: String? = null
 )
 
@@ -57,6 +72,21 @@ class CreateTripViewModel(
     fun onAvailableSpotsChange(v: String) = _form.update { it.copy(availableSpots = v, availableSpotsError = null, globalError = null) }
     fun onDescriptionChange(v: String) = _form.update { it.copy(description = v, globalError = null) }
     fun onImagesRawChange(v: String) = _form.update { it.copy(imagesRaw = v, globalError = null) }
+
+    fun addDraftActivity(name: String, duration: Int, price: Double, availableSpots: Int, description: String?) {
+        val draft = DraftActivityItem(
+            name = name,
+            duration = duration,
+            price = price,
+            availableSpots = availableSpots,
+            description = description
+        )
+        _form.update { it.copy(activities = it.activities + draft) }
+    }
+
+    fun removeDraftActivity(id: String) {
+        _form.update { it.copy(activities = it.activities.filterNot { a -> a.id == id }) }
+    }
 
     fun dismissSuccess() = _form.update { it.copy(successMessage = null) }
     fun dismissError() = _form.update { it.copy(globalError = null) }
@@ -86,10 +116,34 @@ class CreateTripViewModel(
 
         viewModelScope.launch {
             repository.createTrip(request).fold(
-                onSuccess = {
-                    _form.update { state ->
+                onSuccess = { createdTrip ->
+                    // Salva le attività bozza aggiunte durante la creazione del viaggio
+                    var hasActivityErrors = false
+                    for (activity in s.activities) {
+                        val actReq = ActivityRequestDTO(
+                            name = activity.name,
+                            description = activity.description,
+                            duration = activity.duration,
+                            price = activity.price,
+                            availableSpots = activity.availableSpots,
+                            tripId = createdTrip.id
+                        )
+                        val actResult = repository.createActivity(actReq)
+                        if (actResult.isFailure) {
+                            hasActivityErrors = true
+                        }
+                    }
+
+                    _form.update {
                         CreateTripFormState(
-                            successMessage = "Viaggio \"${it.name}\" creato con successo!"
+                            successMessage = if (hasActivityErrors) {
+                                "Viaggio \"${createdTrip.name}\" creato! Alcune attività non sono state salvate."
+                            } else if (s.activities.isNotEmpty()) {
+                                "Viaggio \"${createdTrip.name}\" creato con ${s.activities.size} attività!"
+                            } else {
+                                "Viaggio \"${createdTrip.name}\" creato con successo!"
+                            },
+                            createdTripId = createdTrip.id
                         )
                     }
                 },

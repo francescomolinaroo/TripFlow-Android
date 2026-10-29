@@ -34,7 +34,10 @@ import com.tripflow.feature.auth.ResetPasswordScreen
 import com.tripflow.feature.auth.UserDashboardScreen
 import com.tripflow.feature.auth.VerifyEmailScreen
 import com.tripflow.feature.auth.dashboardRole
+import com.tripflow.feature.catalog.presentation.addactivity.AddActivityScreen
 import com.tripflow.feature.catalog.presentation.detail.TripDetailScreen
+import com.tripflow.feature.catalog.presentation.edit.EditTripScreen
+import com.tripflow.feature.catalog.presentation.organizer.OrganizerTripsScreen
 import com.tripflow.feature.itinerary.navigation.ItineraryNavHost
 import com.tripflow.feature.review.ui.ReviewListScreen
 import com.tripflow.feature.review.ui.WriteReviewScreen
@@ -80,6 +83,9 @@ class MainActivity : ComponentActivity() {
                 BackHandler(enabled = currentScreen !in setOf("discover", "login", "checking_session")) {
                     currentScreen = when (currentScreen) {
                         "booking_form" -> "trip_detail"
+                        "add_activity" -> "trip_detail"
+                        "edit_trip" -> "trip_detail"
+                        "organizer_trips" -> "dashboard"
                         "trip_detail" -> "discover"
                         "booking_detail" -> "booking_list"
                         "booking_list" -> "discover"
@@ -124,7 +130,8 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
-                ) { innerPadding ->Surface(
+                ) { innerPadding ->
+                    Surface(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding)
@@ -174,7 +181,49 @@ class MainActivity : ComponentActivity() {
                             )
                             "create_trip" -> CreateTripScreen(
                                 onBack = { currentScreen = "dashboard" },
-                                onCreated = { currentScreen = "discover" }
+                                onCreated = { currentScreen = "discover" },
+                                onTripCreated = { createdTripId ->
+                                    selectedTripId = createdTripId
+                                    currentScreen = "trip_detail"
+                                },
+                                onAddActivity = { createdTripId ->
+                                    selectedTripId = createdTripId
+                                    currentScreen = "add_activity"
+                                }
+                            )
+                            "add_activity" -> {
+                                selectedTripId?.let { tripId ->
+                                    AddActivityScreen(
+                                        tripId = tripId,
+                                        onBack = { currentScreen = "trip_detail" },
+                                        onCreated = { currentScreen = "trip_detail" }
+                                    )
+                                } ?: run {
+                                    currentScreen = "discover"
+                                }
+                            }
+                            "edit_trip" -> {
+                                selectedTripId?.let { tripId ->
+                                    EditTripScreen(
+                                        tripId = tripId,
+                                        onBack = { currentScreen = "trip_detail" },
+                                        onSaved = { currentScreen = "trip_detail" }
+                                    )
+                                } ?: run {
+                                    currentScreen = "discover"
+                                }
+                            }
+                            "organizer_trips" -> OrganizerTripsScreen(
+                                onBack = { currentScreen = "dashboard" },
+                                onTripClick = { tripId ->
+                                    selectedTripId = tripId
+                                    currentScreen = "trip_detail"
+                                },
+                                onEditTripClick = { tripId ->
+                                    selectedTripId = tripId
+                                    currentScreen = "edit_trip"
+                                },
+                                onCreateTripClick = { currentScreen = "create_trip" }
                             )
                             "itinerary_list" -> ItineraryNavHost()
                             "login" -> LoginScreen(
@@ -243,10 +292,22 @@ class MainActivity : ComponentActivity() {
                                 selectedTripId?.let { id ->
                                     TripDetailScreen(
                                         tripId = id,
+                                        isCurrentUserOrganizer = currentUser?.let { dashboardRole(it.role) == DashboardRole.ORGANIZER } ?: false,
                                         onBackClick = { currentScreen = "discover" },
                                         onBookClick = { tripIdToBook ->
                                             selectedTripId = tripIdToBook
                                             currentScreen = "booking_form"
+                                        },
+                                        onAddActivityClick = { tripIdToAdd ->
+                                            selectedTripId = tripIdToAdd
+                                            currentScreen = "add_activity"
+                                        },
+                                        onEditTripClick = { tripIdToEdit ->
+                                            selectedTripId = tripIdToEdit
+                                            currentScreen = "edit_trip"
+                                        },
+                                        onTripDeleted = {
+                                            currentScreen = "discover"
                                         }
                                     )
                                 } ?: run {
@@ -285,6 +346,7 @@ class MainActivity : ComponentActivity() {
                                     currentScreen = "review_list"
                                 },
                                 onMyTripsClick = { currentScreen = "itinerary_list" },
+                                onMyOrganizedTripsClick = { currentScreen = "organizer_trips" },
                                 onReceivedBookingsClick = { currentScreen = "received_bookings" },
                                 onCreateTripClick = { currentScreen = "create_trip" }
                             )
@@ -362,7 +424,7 @@ fun tabOf(screen: String, reviewListTripId: String?): MainTab? {
         "booking_list", "booking_detail" -> MainTab.BOOKINGS
         "itinerary_list" -> MainTab.ITINERARIES
         "received_bookings", "received_booking_detail" -> MainTab.RECEIVED
-        "dashboard" -> MainTab.PROFILE
+        "dashboard", "organizer_trips" -> MainTab.PROFILE
         "review_list" -> if (reviewListTripId != null) MainTab.BOOKINGS else MainTab.PROFILE
         else -> null
     }

@@ -46,6 +46,10 @@ fun BookingScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    LaunchedEffect(Unit) {
+        viewModel.loadTrip()
+    }
+
     LaunchedEffect(uiState.createdBookingId) {
         uiState.createdBookingId?.let { id ->
             onPaymentClick(id)

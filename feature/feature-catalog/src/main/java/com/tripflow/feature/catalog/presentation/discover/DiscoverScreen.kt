@@ -68,7 +68,10 @@ fun DiscoverScreen(
     val userName by viewModel.userName.collectAsState()
     val userImageUrl by viewModel.userImageUrl.collectAsState()
 
-    LaunchedEffect(Unit) { viewModel.loadUser() }
+    LaunchedEffect(Unit) {
+        viewModel.loadUser()
+        viewModel.loadTrips()
+    }
 
     Column(
         modifier = Modifier
@@ -195,7 +198,7 @@ private fun DiscoverHeader(
                 style = MaterialTheme.typography.headlineMedium
             )
             Text(
-                text = "$tripsCount viaggi in partenza",
+                text = if (tripsCount == 1) "1 viaggio in partenza" else "$tripsCount viaggi in partenza",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -270,7 +273,10 @@ private fun TripResponseDTO.toTripCardUi(): TripCardUi {
     }
 
     val priceString = Formatters.money(BigDecimal.valueOf(this.price))
-    val coverImage = this.images?.firstOrNull()
+    val coverImage = this.images
+        ?.flatMap { it.split(",") }
+        ?.map { it.trim() }
+        ?.firstOrNull { it.isNotBlank() }
 
     return TripCardUi(
         id = this.id,

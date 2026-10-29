@@ -26,8 +26,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Euro
 import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.Group
@@ -59,14 +61,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tripflow.core.ui.component.PrimaryButton
+import com.tripflow.core.ui.component.SecondaryButton
 import com.tripflow.core.ui.component.TripFlowTextArea
 import com.tripflow.core.ui.component.TripFlowTextField
+import com.tripflow.core.ui.format.Formatters
 import com.tripflow.core.ui.theme.Dimens
 import com.tripflow.core.ui.theme.TripFlowColors
+import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -80,16 +86,12 @@ private val ISO = DateTimeFormatter.ISO_LOCAL_DATE
 fun CreateTripScreen(
     onBack: () -> Unit,
     onCreated: () -> Unit,
+    onTripCreated: ((String) -> Unit)? = null,
+    onAddActivity: ((String) -> Unit)? = null,
     viewModel: CreateTripViewModel = viewModel()
 ) {
     val form by viewModel.form.collectAsState()
-
-    // Redirect to discover when trip is successfully created
-    LaunchedEffect(form.successMessage) {
-        if (form.successMessage != null) {
-            // success dialog will handle navigation via its button
-        }
-    }
+    var showAddActivityDialog by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -226,6 +228,32 @@ fun CreateTripScreen(
                     enabled = !form.isLoading
                 )
 
+                // Section: Attività
+                SectionLabel("Attività del viaggio (opzionali)")
+
+                if (form.activities.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(Dimens.gapS)) {
+                        form.activities.forEach { activity ->
+                            DraftActivityRow(
+                                activity = activity,
+                                onDelete = { viewModel.removeDraftActivity(activity.id) }
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "Non hai ancora aggiunto attività. Puoi aggiungerle ora o dal dettaglio del viaggio in seguito.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TripFlowColors.TextSecondary
+                    )
+                }
+
+                SecondaryButton(
+                    text = "+ Aggiungi un'attività al viaggio",
+                    onClick = { showAddActivityDialog = true },
+                    enabled = !form.isLoading
+                )
+
                 // Global error
                 AnimatedVisibility(
                     visible = form.globalError != null,
@@ -261,16 +289,221 @@ fun CreateTripScreen(
         }
     }
 
+    if (showAddActivityDialog) {
+        AddDraftActivityDialog(
+            onDismiss = { showAddActivityDialog = false },
+            onConfirm = { name, duration, price, spots, desc ->
+                viewModel.addDraftActivity(name, duration, price, spots, desc)
+                showAddActivityDialog = false
+            }
+        )
+    }
+
     // Success dialog
     if (form.successMessage != null) {
         SuccessDialog(
             message = form.successMessage!!,
+            createdTripId = form.createdTripId,
             onDismiss = {
                 viewModel.dismissSuccess()
                 onCreated()
+            },
+            onViewTrip = {
+                val tripId = form.createdTripId
+                viewModel.dismissSuccess()
+                if (tripId != null && onTripCreated != null) {
+                    onTripCreated(tripId)
+                } else {
+                    onCreated()
+                }
+            },
+            onAddActivity = {
+                val tripId = form.createdTripId
+                viewModel.dismissSuccess()
+                if (tripId != null && onAddActivity != null) {
+                    onAddActivity(tripId)
+                } else {
+                    onCreated()
+                }
             }
         )
     }
+}
+
+// ─── Draft Activity Row ───────────────────────────────────────────────────────
+
+@Composable
+private fun DraftActivityRow(
+    activity: DraftActivityItem,
+    onDelete: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Dimens.radiusCard))
+            .background(TripFlowColors.Surface)
+            .border(1.dp, TripFlowColors.Border, RoundedCornerShape(Dimens.radiusCard))
+            .padding(Dimens.gapM),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = activity.name,
+                style = MaterialTheme.typography.titleSmall,
+                color = TripFlowColors.TextPrimary
+            )
+            Text(
+                text = "${activity.duration}m • ${activity.availableSpots} posti • ${Formatters.money(BigDecimal.valueOf(activity.price))}",
+                style = MaterialTheme.typography.bodySmall,
+                color = TripFlowColors.TextSecondary
+            )
+            if (!activity.description.isNullOrBlank()) {
+                Text(
+                    text = activity.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TripFlowColors.TextBody,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+        }
+        IconButton(onClick = onDelete) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Rimuovi attività",
+                tint = TripFlowColors.Error,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+// ─── Add Draft Activity Dialog ────────────────────────────────────────────────
+
+@Composable
+private fun AddDraftActivityDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, duration: Int, price: Double, spots: Int, description: String?) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var duration by remember { mutableStateOf("") }
+    var price by remember { mutableStateOf("") }
+    var spots by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+
+    var error by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Nuova attività",
+                style = MaterialTheme.typography.titleLarge,
+                color = TripFlowColors.TextPrimary
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Dimens.gapM)
+            ) {
+                TripFlowTextField(
+                    value = name,
+                    onValueChange = { name = it; error = null },
+                    label = "Nome attività *",
+                    placeholder = "es. Visita guidata",
+                    error = null,
+                    enabled = true,
+                    isPassword = false
+                )
+
+                TripFlowTextField(
+                    value = duration,
+                    onValueChange = { duration = it; error = null },
+                    label = "Durata (minuti) *",
+                    placeholder = "es. 90",
+                    error = null,
+                    enabled = true,
+                    isPassword = false,
+                    keyboardType = KeyboardType.Number
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.gapM)
+                ) {
+                    TripFlowTextField(
+                        value = price,
+                        onValueChange = { price = it; error = null },
+                        label = "Prezzo (€) *",
+                        placeholder = "0.00",
+                        error = null,
+                        enabled = true,
+                        isPassword = false,
+                        keyboardType = KeyboardType.Decimal,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TripFlowTextField(
+                        value = spots,
+                        onValueChange = { spots = it; error = null },
+                        label = "Posti *",
+                        placeholder = "0",
+                        error = null,
+                        enabled = true,
+                        isPassword = false,
+                        keyboardType = KeyboardType.Number,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                TripFlowTextArea(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = "Descrizione (opzionale)",
+                    placeholder = "Breve descrizione…",
+                    maxChars = 300,
+                    minHeight = 80.dp
+                )
+
+                if (error != null) {
+                    Text(
+                        text = error!!,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TripFlowColors.Error
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val n = name.trim()
+                    val d = duration.trim().toIntOrNull()
+                    val p = price.trim().toDoubleOrNull()
+                    val s = spots.trim().toIntOrNull()
+
+                    when {
+                        n.length < 3 -> error = "Inserisci un nome valido (almeno 3 caratteri)"
+                        d == null || d <= 0 -> error = "Inserisci una durata valida in minuti"
+                        p == null || p < 0 -> error = "Inserisci un prezzo valido"
+                        s == null || s <= 0 -> error = "Inserisci posti validi (almeno 1)"
+                        else -> onConfirm(n, d, p, s, description.trim().takeIf { it.isNotBlank() })
+                    }
+                }
+            ) {
+                Text("Aggiungi", color = TripFlowColors.Accent)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Annulla")
+            }
+        },
+        containerColor = TripFlowColors.Background,
+        tonalElevation = 0.dp
+    )
 }
 
 // ─── Top bar ─────────────────────────────────────────────────────────────────
@@ -350,7 +583,6 @@ private fun DateField(
 ) {
     var showPicker by remember { mutableStateOf(false) }
 
-    // pre-select the current value in the DatePicker if parseable
     val initialMillis = remember(value) {
         runCatching {
             LocalDate.parse(value, ISO).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
@@ -505,7 +737,13 @@ private fun ErrorBanner(message: String) {
 // ─── Success dialog ───────────────────────────────────────────────────────────
 
 @Composable
-private fun SuccessDialog(message: String, onDismiss: () -> Unit) {
+private fun SuccessDialog(
+    message: String,
+    createdTripId: String?,
+    onDismiss: () -> Unit,
+    onViewTrip: () -> Unit,
+    onAddActivity: () -> Unit
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
@@ -531,8 +769,18 @@ private fun SuccessDialog(message: String, onDismiss: () -> Unit) {
             )
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Vai ai viaggi", color = TripFlowColors.Accent)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (createdTripId != null) {
+                    TextButton(onClick = onAddActivity) {
+                        Text("+ Attività", color = TripFlowColors.Accent, fontWeight = FontWeight.Bold)
+                    }
+                    TextButton(onClick = onViewTrip) {
+                        Text("Dettagli", color = TripFlowColors.Accent)
+                    }
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Home")
+                }
             }
         },
         containerColor = TripFlowColors.Background,
