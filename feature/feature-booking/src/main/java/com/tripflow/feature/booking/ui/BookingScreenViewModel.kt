@@ -55,7 +55,8 @@ class BookingScreenViewModel(
     fun onToggleActivity(activityId: String) {
         _uiState.update { state ->
             val updatedActivities = state.activities.map { activity ->
-                if (activity.id == activityId) {
+                val esaurita = activity.availableSpots != null && activity.availableSpots <= 0
+                if (activity.id == activityId && !esaurita) {
                     activity.copy(isSelected = !activity.isSelected)
                 } else {
                     activity

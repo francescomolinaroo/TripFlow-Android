@@ -431,11 +431,19 @@ private fun ActivityRow(activity: ActivityUiModel) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(text = activity.name, style = MaterialTheme.typography.titleSmall)
-            Text(
-                text = "${activity.duration}m • ${activity.spots} posti",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (activity.spots <= 0) {
+                Text(
+                    text = "${activity.duration}m • Esaurita",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            } else {
+                Text(
+                    text = "${activity.duration}m • ${activity.spots} posti liberi",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         Text(text = activity.price, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
     }

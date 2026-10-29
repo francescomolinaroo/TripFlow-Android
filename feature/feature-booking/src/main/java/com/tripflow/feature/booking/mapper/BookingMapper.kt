@@ -156,7 +156,8 @@ fun ActivityResponseDTO.toUi(): ActivityUi = ActivityUi(
     name = name,
     price = BigDecimal.valueOf(price).setScale(0, RoundingMode.HALF_UP).toInt(),
     isSelected = false,
-    duration = Formatters.duration(duration)
+    duration = Formatters.duration(duration),
+    availableSpots = availableSpots
 )
 
 

@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -26,6 +27,14 @@ import com.tripflow.feature.booking.ui.ActivityUi
 @Composable
 fun ActivityItem(activity: ActivityUi, onToggle: () -> Unit) {
     val shape = RoundedCornerShape(Dimens.radiusCard)
+    var esaurita = false
+    if (activity.availableSpots != null && activity.availableSpots <= 0) {
+        esaurita = true
+    }
+    var sottotitolo = activity.duration
+    if (esaurita) {
+        sottotitolo = activity.duration + " · Esaurita"
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -36,7 +45,8 @@ fun ActivityItem(activity: ActivityUi, onToggle: () -> Unit) {
                 shape = shape
             )
             .background(if (activity.isSelected) TripFlowColors.AccentSoft else Color.Transparent)
-            .clickable { onToggle() }
+            .clickable(enabled = !esaurita) { onToggle() }
+            .alpha(if (esaurita) 0.5f else 1f)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -44,11 +54,12 @@ fun ActivityItem(activity: ActivityUi, onToggle: () -> Unit) {
         Checkbox(
             checked = activity.isSelected,
             onCheckedChange = { onToggle() },
+            enabled = !esaurita,
             colors = CheckboxDefaults.colors(checkedColor = TripFlowColors.Accent)
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(activity.name, style = MaterialTheme.typography.titleSmall)
-            Text(activity.duration, style = MaterialTheme.typography.bodySmall, color = TripFlowColors.TextSecondary)
+            Text(sottotitolo, style = MaterialTheme.typography.bodySmall, color = TripFlowColors.TextSecondary)
         }
         Column(horizontalAlignment = Alignment.End) {
             Text("€ ${activity.price}", style = MaterialTheme.typography.titleSmall)

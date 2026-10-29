@@ -5,5 +5,6 @@ data class ActivityUi(
     val name: String,
     val price: Int,
     val isSelected: Boolean,
-    val duration: String
+    val duration: String,
+    val availableSpots: Int? = null
 )

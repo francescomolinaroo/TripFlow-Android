@@ -7,5 +7,6 @@ data class ActivityResponseDTO(
     val duration: Int,
     val price: Double,
     val availableSpots: Int,
-    val tripId: String
+    val tripId: String,
+    val totalSpots: Int? = null
 )
