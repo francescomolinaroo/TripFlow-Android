@@ -38,6 +38,8 @@ import com.tripflow.core.ui.component.InfoChip
 import com.tripflow.core.ui.component.PrimaryButton
 import com.tripflow.core.ui.component.SecondaryButton
 import com.tripflow.core.ui.component.StateHost
+import com.tripflow.core.ui.component.StatusChip
+import com.tripflow.core.ui.component.StatusStyle
 import com.tripflow.core.ui.component.UserBadge
 import com.tripflow.core.ui.format.Formatters
 import com.tripflow.core.ui.theme.Dimens
@@ -120,7 +122,7 @@ fun TripDetailScreen(
             if (currentData != null) {
                 if (!isOrganizer) {
                     val data = currentData.toUiModel()
-                    BottomBookingBar(price = data.priceString, onBookClick = { onBookClick(tripId) })
+                    BottomBookingBar(price = data.priceString, availableSpots = data.availableSpots, onBookClick = { onBookClick(tripId) })
                 } else {
                     OrganizerBottomBar(
                         onEditClick = { onEditTripClick(tripId) },
@@ -392,7 +394,16 @@ private fun TripHeaderSection(uiModel: TripDetailUiModel) {
         ) {
             InfoChip(text = uiModel.dateString, leading = {})
             InfoChip(text = uiModel.durationString, leading = {})
-            InfoChip(text = uiModel.spotsString, leading = {})
+            if (uiModel.availableSpots <= 0) {
+                StatusChip(style = StatusStyle("Esaurito", TripFlowColors.TextSecondary, TripFlowColors.Surface3))
+            } else {
+                val spotsColor = if (uiModel.availableSpots < 5) TripFlowColors.Warning else null
+                InfoChip(
+                    text = uiModel.spotsString,
+                    highlighted = spotsColor != null,
+                    leading = {}
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(Dimens.gapL))
@@ -479,7 +490,8 @@ private fun ReviewRow(review: ReviewUiModel) {
 }
 
 @Composable
-private fun BottomBookingBar(price: String, onBookClick: () -> Unit) {
+private fun BottomBookingBar(price: String, availableSpots: Int, onBookClick: () -> Unit) {
+    val isSoldOut = availableSpots <= 0
     Surface(
         shadowElevation = 8.dp,
         color = MaterialTheme.colorScheme.surface
@@ -494,14 +506,19 @@ private fun BottomBookingBar(price: String, onBookClick: () -> Unit) {
         ) {
             Column {
                 Text(text = price, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(text = "a persona", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = if (isSoldOut) "Posti esauriti" else "a persona",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isSoldOut) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             Button(
                 onClick = onBookClick,
+                enabled = !isSoldOut,
                 shape = RoundedCornerShape(Dimens.radiusButton),
                 modifier = Modifier.height(Dimens.fieldHeight)
             ) {
-                Text("Prenota ora")
+                Text(if (isSoldOut) "Esaurito" else "Prenota ora")
             }
         }
     }
@@ -516,6 +533,7 @@ private data class TripDetailUiModel(
     val dateString: String,
     val durationString: String,
     val spotsString: String,
+    val availableSpots: Int,
     val organizerName: String,
     val description: String,
     val priceString: String,
@@ -557,7 +575,8 @@ private fun TripDetailData.toUiModel(): TripDetailUiModel {
         ratingString = if (hasReviews) "$avgRatingStr (${this.reviews.size})" else "Nessuna recensione",
         dateString = if (start != null && end != null) Formatters.dateRange(start, end) else "",
         durationString = if (days == 1L) "1 giorno" else if (days > 1L) "$days giorni" else "",
-        spotsString = "${t.availableSpots} posti",
+        spotsString = if (t.availableSpots <= 0) "Esaurito" else "${t.availableSpots} posti liberi",
+        availableSpots = t.availableSpots,
         organizerName = this.organizerName,
 
         description = t.description ?: "Nessuna descrizione disponibile per questo viaggio.",

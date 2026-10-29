@@ -8,6 +8,7 @@ data class TripResponseDTO(
     val endDate: String,
     val price: Double,
     val availableSpots: Int,
+    val totalSpots: Int? = null,
     val organizerId: String,
     val description: String?,
     val images: List<String>?,
