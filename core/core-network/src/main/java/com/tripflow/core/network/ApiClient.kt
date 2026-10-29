@@ -13,6 +13,19 @@ object ApiClient {
     // Fornisce il token JWT salvato (impostato da TokenStorage / Auth)
     var tokenProvider: (() -> String?)? = null
 
+    // Da' all'Authenticator l'accesso ai token salvati per rinnovarli sul 401 (impostato da TokenStorage).
+    var sessionTokenStore: SessionTokenStore? = null
+
+    // Client "nudo" per la sola chiamata di refresh: niente interceptor che allega il token scaduto
+    // (altrimenti Spring risponde 401 anche su /auth/refresh) e niente authenticator, cosi' un 401
+    // sul refresh non rientra in un ciclo infinito.
+    private val refreshRetrofit: Retrofit by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
     private val okHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .addInterceptor { chain ->
@@ -23,6 +36,13 @@ object ApiClient {
                 }
                 chain.proceed(requestBuilder.build())
             }
+            // Rinnova il token e riprova la richiesta quando il backend risponde 401 (token scaduto).
+            .authenticator(
+                TokenAuthenticator(
+                    storeProvider = { sessionTokenStore },
+                    refreshApi = refreshRetrofit.create(AuthApi::class.java),
+                )
+            )
             .build()
     }
 

@@ -1,6 +1,7 @@
 ﻿package com.tripflow.core.network.auth
 
 import okhttp3.MultipartBody
+import retrofit2.Call
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -20,6 +21,11 @@ interface AuthApi {
 
     @POST("user-auth-service/api/auth/refresh")
     suspend fun refresh(@Body request: RefreshTokenRequest): TokenRefreshResponse
+
+    // Variante bloccante usata dentro TokenAuthenticator: un Authenticator OkHttp non e' una coroutine,
+    // quindi serve una Call da eseguire con .execute() invece di una funzione suspend.
+    @POST("user-auth-service/api/auth/refresh")
+    fun refreshBlocking(@Body request: RefreshTokenRequest): Call<TokenRefreshResponse>
 
     @POST("user-auth-service/api/auth/logout")
     suspend fun logout(@Body request: LogoutRequest)
