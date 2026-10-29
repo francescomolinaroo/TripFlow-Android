@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tripflow.core.model.UiState
 import com.tripflow.feature.itinerary.model.ItineraryDetail
+import com.tripflow.feature.itinerary.model.ItineraryShare
 import com.tripflow.feature.itinerary.model.Visibility
 import com.tripflow.feature.itinerary.repository.ItineraryRepository
 import com.tripflow.feature.itinerary.session.CurrentUserProvider
@@ -17,8 +18,20 @@ import javax.inject.Inject
 data class ItineraryDetailActionState(
     val deletingStageId: String? = null,
     val isUpdatingVisibility: Boolean = false,
+    val isDeletingItinerary: Boolean = false,
+    // true dopo l'eliminazione: la schermata torna indietro.
+    val itineraryDeleted: Boolean = false,
     val message: String? = null,
     val errorMessage: String? = null,
+)
+
+// Stato della finestra "Condividi con un utente".
+data class ShareUiState(
+    val isOpen: Boolean = false,
+    val isLoading: Boolean = false,
+    val isSubmitting: Boolean = false,
+    val shares: List<ItineraryShare> = emptyList(),
+    val error: String? = null,
 )
 
 @HiltViewModel
@@ -32,6 +45,9 @@ class ItineraryDetailViewModel @Inject constructor(
 
     private val _actionState = MutableStateFlow(ItineraryDetailActionState())
     val actionState = _actionState.asStateFlow()
+
+    private val _shareState = MutableStateFlow(ShareUiState())
+    val shareState = _shareState.asStateFlow()
 
     private var itineraryId: String? = null
 
@@ -146,6 +162,117 @@ class ItineraryDetailViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    // Solo il proprietario (il backend risponde 403 agli altri).
+    fun deleteItinerary() {
+        val id = itineraryId ?: return
+        if (_actionState.value.isDeletingItinerary) return
+        viewModelScope.launch {
+            _actionState.update { it.copy(isDeletingItinerary = true, message = null, errorMessage = null) }
+            when (val result = repository.deleteItinerary(id)) {
+                is UiState.Success -> _actionState.update {
+                    it.copy(isDeletingItinerary = false, itineraryDeleted = true)
+                }
+                is UiState.Error -> _actionState.update {
+                    it.copy(isDeletingItinerary = false, errorMessage = result.message)
+                }
+                else -> _actionState.update {
+                    it.copy(isDeletingItinerary = false, errorMessage = "Impossibile eliminare l'itinerario")
+                }
+            }
+        }
+    }
+
+    // "Condiviso" scelto da "Cambia visibilita'": da PRIVATE basta aggiungere persone
+    // (la prima condivisione rende l'itinerario SHARED); da PUBLIC prima si passa a SHARED,
+    // che revoca il link pubblico, poi si apre la scelta delle persone.
+    fun switchToShared() {
+        val id = itineraryId ?: return
+        val current = (_uiState.value as? UiState.Success)?.data ?: return
+        if (current.visibility != Visibility.PUBLIC) {
+            openShares()
+            return
+        }
+        if (_actionState.value.isUpdatingVisibility) return
+        viewModelScope.launch {
+            _actionState.update { it.copy(isUpdatingVisibility = true, message = null, errorMessage = null) }
+            when (val result = repository.updateVisibility(id, Visibility.SHARED)) {
+                is UiState.Success -> {
+                    _uiState.value = UiState.Success(result.data.sortedByOrder())
+                    _actionState.update { it.copy(isUpdatingVisibility = false) }
+                    openShares()
+                }
+                is UiState.Error -> _actionState.update {
+                    it.copy(isUpdatingVisibility = false, errorMessage = result.message)
+                }
+                else -> _actionState.update {
+                    it.copy(isUpdatingVisibility = false, errorMessage = "Impossibile aggiornare la visibilita'")
+                }
+            }
+        }
+    }
+
+    fun openShares() {
+        val id = itineraryId ?: return
+        _shareState.value = ShareUiState(isOpen = true, isLoading = true)
+        viewModelScope.launch {
+            when (val result = repository.getShares(id)) {
+                is UiState.Success -> _shareState.update { it.copy(isLoading = false, shares = result.data) }
+                is UiState.Error -> _shareState.update { it.copy(isLoading = false, error = result.message) }
+                else -> _shareState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
+    fun closeShares() {
+        _shareState.value = ShareUiState()
+    }
+
+    // Il codice e' l'id utente (UUID) che il destinatario vede in "Il mio codice".
+    fun shareWith(code: String, canEdit: Boolean) {
+        val id = itineraryId ?: return
+        if (_shareState.value.isSubmitting) return
+        val userId = code.trim()
+        if (runCatching { java.util.UUID.fromString(userId) }.isFailure) {
+            _shareState.update { it.copy(error = "Codice utente non valido") }
+            return
+        }
+        viewModelScope.launch {
+            _shareState.update { it.copy(isSubmitting = true, error = null) }
+            when (val result = repository.shareItinerary(id, userId, canEdit)) {
+                is UiState.Success -> {
+                    _shareState.update { it.copy(isSubmitting = false, shares = it.shares + result.data) }
+                    _actionState.update { it.copy(message = "Itinerario condiviso") }
+                    // La prima condivisione rende SHARED un itinerario privato.
+                    refreshDetail(id)
+                }
+                is UiState.Error -> _shareState.update { it.copy(isSubmitting = false, error = result.message) }
+                else -> _shareState.update { it.copy(isSubmitting = false, error = "Impossibile condividere") }
+            }
+        }
+    }
+
+    fun removeShare(userId: String) {
+        val id = itineraryId ?: return
+        viewModelScope.launch {
+            when (val result = repository.removeShare(id, userId)) {
+                is UiState.Success -> {
+                    _shareState.update { state -> state.copy(shares = state.shares.filterNot { it.userId == userId }, error = null) }
+                    _actionState.update { it.copy(message = "Condivisione rimossa") }
+                    // Rimossa l'ultima condivisione, l'itinerario torna PRIVATE.
+                    refreshDetail(id)
+                }
+                is UiState.Error -> _shareState.update { it.copy(error = result.message) }
+                else -> _shareState.update { it.copy(error = "Impossibile rimuovere la condivisione") }
+            }
+        }
+    }
+
+    // Aggiorna il dettaglio senza passare da Loading (niente schermata di caricamento).
+    private suspend fun refreshDetail(id: String) {
+        val result = repository.getItineraryDetail(id)
+        if (result is UiState.Success) _uiState.value = UiState.Success(result.data.sortedByOrder())
     }
 
     fun clearActionMessage() {

@@ -76,4 +76,29 @@ interface ItineraryApi {
     suspend fun getCatalogItem(
         @Path("id") id: String
     ): TripResponseDto
+
+    // --- Condivisioni (solo proprietario) ---
+
+    @GET("itinerary-service/api/itineraries/{id}/shares")
+    suspend fun getShares(
+        @Path("id") id: String
+    ): List<com.tripflow.feature.itinerary.data.remote.dto.ShareResponseDto>
+
+    @POST("itinerary-service/api/itineraries/{id}/shares")
+    suspend fun shareItinerary(
+        @Path("id") id: String,
+        @Body request: com.tripflow.feature.itinerary.data.remote.dto.ShareRequestDto
+    ): com.tripflow.feature.itinerary.data.remote.dto.ShareResponseDto
+
+    @DELETE("itinerary-service/api/itineraries/{id}/shares/{userId}")
+    suspend fun removeShare(
+        @Path("id") id: String,
+        @Path("userId") userId: String
+    )
+
+    // Nome pubblico dell'utente con cui si condivide (user-auth-service).
+    @GET("user-auth-service/api/auth/users/by-keycloak/{keycloakId}")
+    suspend fun getUserByKeycloakId(
+        @Path("keycloakId") keycloakId: String
+    ): com.tripflow.core.network.auth.PublicUserResponse
 }

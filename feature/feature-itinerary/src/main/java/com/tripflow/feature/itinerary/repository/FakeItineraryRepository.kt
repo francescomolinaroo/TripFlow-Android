@@ -285,7 +285,7 @@ class FakeItineraryRepository : ItineraryRepository {
         val catalogId = (source as? StageSource.FromCatalog)?.catalogItemId?.toString()
         val title = when (source) {
             is StageSource.Custom -> source.title
-            is StageSource.FromCatalog -> "Tappa dal catalogo"
+            is StageSource.FromCatalog -> source.title ?: "Tappa dal catalogo"
         }
         val description = when (source) {
             is StageSource.Custom -> source.description

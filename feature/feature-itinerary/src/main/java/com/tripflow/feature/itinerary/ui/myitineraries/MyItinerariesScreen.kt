@@ -11,6 +11,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.outlined.Map
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -33,7 +43,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -62,6 +71,7 @@ fun MyItinerariesScreen(
     val scope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
+    var showMyCode by remember { mutableStateOf(false) }
 
     // Ricarica la lista quando si torna su questa schermata (es. dopo la creazione
     // di un itinerario o modifiche fatte nel dettaglio).
@@ -112,6 +122,17 @@ fun MyItinerariesScreen(
                         )
                     }
                 },
+                actions = {
+                    if (viewModel.myUserCode != null) {
+                        IconButton(onClick = { showMyCode = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Badge,
+                                contentDescription = "Il mio codice utente",
+                                tint = TripFlowColors.TextPrimary,
+                            )
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = TripFlowColors.Background,
                     titleContentColor = TripFlowColors.TextPrimary
@@ -130,8 +151,8 @@ fun MyItinerariesScreen(
                     )
                 },
                 modifier = Modifier.padding(Dimens.screenPadding),
-                containerColor = TripFlowColors.TextPrimary,
-                contentColor = Color.White,
+                containerColor = TripFlowColors.ButtonContainer,
+                contentColor = TripFlowColors.ButtonContent,
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(Dimens.radiusButton),
             )
         },
@@ -146,10 +167,90 @@ fun MyItinerariesScreen(
             emptyActionLabel = "Crea itinerario",
             onEmptyAction = onCreateNewClick,
             loading = { LoadingState() },
+            empty = { ItinerariesEmptyState(onCreateNewClick) },
             content = { itineraries ->
                 SuccessState(itineraries, onItineraryClick)
             }
         )
+    }
+    val code = viewModel.myUserCode
+    if (showMyCode && code != null) {
+        MyUserCodeDialog(code = code, onDismiss = { showMyCode = false })
+    }
+}
+
+@Composable
+private fun MyUserCodeDialog(code: String, onDismiss: () -> Unit) {
+    val clipboard = LocalClipboardManager.current
+    var copied by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Il tuo codice utente") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(Dimens.gapS)) {
+                Text("Mandalo a chi vuole condividere con te un suo itinerario: dovra' incollarlo in \"Condividi con un utente\".")
+                Text(
+                    text = code,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    color = TripFlowColors.TextPrimary,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                clipboard.setText(AnnotatedString(code))
+                copied = true
+            }) {
+                Text(if (copied) "Copiato" else "Copia")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Chiudi") }
+        },
+        containerColor = TripFlowColors.Background,
+    )
+}
+
+@Composable
+private fun ItinerariesEmptyState(onCreateNewClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .background(TripFlowColors.Surface2, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Map,
+                contentDescription = null,
+                tint = TripFlowColors.Accent,
+                modifier = Modifier.size(36.dp),
+            )
+        }
+        Text(
+            text = "Nessun itinerario",
+            style = MaterialTheme.typography.titleLarge,
+            color = TripFlowColors.TextPrimary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = Dimens.gapXL),
+        )
+        Text(
+            text = "Crea il tuo primo itinerario per organizzare il viaggio giorno per giorno.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = TripFlowColors.TextSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = Dimens.gapS),
+        )
+        Box(modifier = Modifier.padding(top = Dimens.gapXL)) {
+            PrimaryButton(text = "Crea itinerario", onClick = onCreateNewClick)
+        }
     }
 }
 

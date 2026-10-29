@@ -170,4 +170,96 @@ class ItineraryDetailViewModelTest {
         assertEquals(before, (viewModel.uiState.value as UiState.Success<ItineraryDetail>).data.visibility)
         assertEquals("Only the owner can perform this action", viewModel.actionState.value.errorMessage)
     }
+
+    private class SharingRepository : ItineraryRepository by FakeItineraryRepository() {
+        val shares = mutableListOf<com.tripflow.feature.itinerary.model.ItineraryShare>()
+        override suspend fun getShares(itineraryId: String) = UiState.Success(shares.toList())
+        override suspend fun shareItinerary(itineraryId: String, userId: String, canEdit: Boolean) =
+            UiState.Success(com.tripflow.feature.itinerary.model.ItineraryShare(userId, canEdit, "Mario Rossi").also { shares += it })
+        override suspend fun removeShare(itineraryId: String, userId: String): UiState<Unit> {
+            shares.removeAll { it.userId == userId }
+            return UiState.Success(Unit)
+        }
+    }
+
+    @Test
+    fun `shareWith adds the share and removeShare removes it`() = runTest {
+        val viewModel = ItineraryDetailViewModel(SharingRepository(), CurrentUserProvider { "owner-1" })
+        viewModel.loadItinerary("1")
+        viewModel.openShares()
+
+        viewModel.shareWith(" 11111111-2222-3333-4444-555555555555 ", canEdit = true)
+
+        val added = viewModel.shareState.value.shares.single()
+        assertEquals("11111111-2222-3333-4444-555555555555", added.userId)
+        assertTrue(added.canEdit)
+        assertEquals("Itinerario condiviso", viewModel.actionState.value.message)
+
+        viewModel.removeShare(added.userId)
+
+        assertTrue(viewModel.shareState.value.shares.isEmpty())
+    }
+
+    @Test
+    fun `shareWith rejects an invalid user code without calling the backend`() = runTest {
+        val repository = SharingRepository()
+        val viewModel = ItineraryDetailViewModel(repository, CurrentUserProvider { "owner-1" })
+        viewModel.loadItinerary("1")
+        viewModel.openShares()
+
+        viewModel.shareWith("non-un-codice", canEdit = false)
+
+        assertEquals("Codice utente non valido", viewModel.shareState.value.error)
+        assertTrue(repository.shares.isEmpty())
+    }
+
+    @Test
+    fun `deleteItinerary marks the itinerary as deleted`() = runTest {
+        val viewModel = ItineraryDetailViewModel(FakeItineraryRepository(), CurrentUserProvider { "owner-1" })
+        viewModel.loadItinerary("1")
+
+        viewModel.deleteItinerary()
+
+        assertTrue(viewModel.actionState.value.itineraryDeleted)
+        assertFalse(viewModel.actionState.value.isDeletingItinerary)
+    }
+
+    @Test
+    fun `deleteItinerary error keeps the screen and shows the message`() = runTest {
+        val repository = object : ItineraryRepository by FakeItineraryRepository() {
+            override suspend fun deleteItinerary(id: String): UiState<Unit> =
+                UiState.Error("Only the owner can perform this action", retryable = false)
+        }
+        val viewModel = ItineraryDetailViewModel(repository, CurrentUserProvider { "owner-1" })
+        viewModel.loadItinerary("1")
+
+        viewModel.deleteItinerary()
+
+        assertFalse(viewModel.actionState.value.itineraryDeleted)
+        assertEquals("Only the owner can perform this action", viewModel.actionState.value.errorMessage)
+    }
+
+    @Test
+    fun `switchToShared from public changes visibility and opens the share dialog`() = runTest {
+        val viewModel = ItineraryDetailViewModel(SharingRepository(), CurrentUserProvider { "owner-1" })
+        viewModel.loadItinerary("3") // itinerario PUBLIC
+
+        viewModel.switchToShared()
+
+        val detail = (viewModel.uiState.value as UiState.Success<ItineraryDetail>).data
+        assertEquals(Visibility.SHARED, detail.visibility)
+        assertTrue(viewModel.shareState.value.isOpen)
+    }
+
+    @Test
+    fun `switchToShared from private only opens the share dialog`() = runTest {
+        val viewModel = ItineraryDetailViewModel(SharingRepository(), CurrentUserProvider { "owner-1" })
+        viewModel.loadItinerary("1") // itinerario PRIVATE
+
+        viewModel.switchToShared()
+
+        val detail = (viewModel.uiState.value as UiState.Success<ItineraryDetail>).data
+        assertEquals(Visibility.PRIVATE, detail.visibility)
+        assertTrue(viewModel.shareState.value.isOpen)
+    }
 }

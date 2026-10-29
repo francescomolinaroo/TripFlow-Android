@@ -1,5 +1,6 @@
 package com.tripflow.feature.itinerary.ui.createitinerary
 
+import com.tripflow.feature.itinerary.ui.common.WithItalianLocale
 import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +21,7 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -159,12 +161,19 @@ fun CreateItineraryScreen(
                     color = TripFlowColors.TextBody,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(Dimens.gapS)) {
-                    Visibility.entries.forEach { visibility ->
+                    // "Condiviso" non si sceglie in creazione: l'itinerario lo diventa da solo
+                    // quando lo condividi con qualcuno dal dettaglio. Cosi' non esistono
+                    // itinerari "condivisi con nessuno".
+                    listOf(Visibility.PRIVATE, Visibility.PUBLIC).forEach { visibility ->
                         FilterChip(
                             selected = state.visibility == visibility,
                             onClick = { viewModel.onVisibilityChange(visibility) },
                             label = { Text(visibility.label()) },
                             enabled = !state.isSubmitting,
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = TripFlowColors.AccentSoft.copy(alpha = 0.5f),
+                                selectedLabelColor = TripFlowColors.AccentDark,
+                            ),
                         )
                     }
                 }
@@ -282,31 +291,41 @@ private fun ItineraryDatePickerDialog(
     onDismiss: () -> Unit,
     onDateSelected: (LocalDate) -> Unit,
 ) {
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = initialDate?.toUtcMillis(),
-    )
-
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    datePickerState.selectedDateMillis
-                        ?.toLocalDateUtc()
-                        ?.let(onDateSelected)
+    // Lo stato va creato dentro WithItalianLocale: il DatePicker fissa la lingua alla creazione.
+    WithItalianLocale {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = initialDate?.toUtcMillis(),
+        )
+        DatePickerDialog(
+            onDismissRequest = onDismiss,
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis
+                            ?.toLocalDateUtc()
+                            ?.let(onDateSelected)
+                    },
+                    enabled = datePickerState.selectedDateMillis != null,
+                ) {
+                    Text("Conferma")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("Annulla")
+                }
+            },
+        ) {
+            DatePicker(
+                state = datePickerState,
+                title = {
+                    Text(
+                        text = "Seleziona la data",
+                        modifier = androidx.compose.ui.Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp),
+                    )
                 },
-                enabled = datePickerState.selectedDateMillis != null,
-            ) {
-                Text("Conferma")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Annulla")
-            }
-        },
-    ) {
-        DatePicker(state = datePickerState)
+            )
+        }
     }
 }
 
@@ -329,7 +348,7 @@ private fun Visibility.label(): String = when (this) {
 
 private fun Visibility.description(): String = when (this) {
     Visibility.PUBLIC -> "Visibile a tutti gli utenti."
-    Visibility.PRIVATE -> "Visibile solo a te."
+    Visibility.PRIVATE -> "Visibile solo a te. Potrai condividerlo con altre persone dal dettaglio."
     Visibility.SHARED -> "Visibile solo alle persone con cui lo condividi."
 }
 

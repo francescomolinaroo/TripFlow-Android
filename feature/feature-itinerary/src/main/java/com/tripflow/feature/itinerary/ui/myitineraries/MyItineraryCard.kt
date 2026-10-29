@@ -68,7 +68,7 @@ fun MyItineraryCard(
 
         // Subtitle: Date range + stops count
         Text(
-            text = "${itinerary.dateRange} · ${itinerary.stopsCount} tappe",
+            text = "${itinerary.dateRange} · ${itinerary.stopsCount} ${if (itinerary.stopsCount == 1) "tappa" else "tappe"}",
             style = MaterialTheme.typography.bodySmall,
             color = TripFlowColors.TextSecondary,
             modifier = Modifier
@@ -100,7 +100,7 @@ fun MyItineraryCard(
         // Remaining stops indicator
         if (remainingStops > 0) {
             Text(
-                text = "• e altre $remainingStops tappe",
+                text = if (remainingStops == 1) "• e un'altra tappa" else "• e altre $remainingStops tappe",
                 style = MaterialTheme.typography.bodySmall,
                 color = TripFlowColors.TextSecondary,
                 modifier = Modifier

@@ -1,6 +1,16 @@
 package com.tripflow.feature.itinerary.ui.itinerarydetail
 
+import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.EventAvailable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.core.content.ContextCompat
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,14 +26,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -51,7 +60,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -80,10 +88,17 @@ fun ItineraryDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val actionState by viewModel.actionState.collectAsState()
+    val shareState by viewModel.shareState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var stageToDelete by remember { mutableStateOf<StageDetail?>(null) }
     var visibilityMenuOpen by remember { mutableStateOf(false) }
     var confirmMakePrivate by remember { mutableStateOf(false) }
+    var showVisibilityDialog by remember { mutableStateOf(false) }
+    var confirmDeleteItinerary by remember { mutableStateOf(false) }
+    var showCalendarSheet by remember { mutableStateOf(false) }
+    var isAddingToCalendar by remember { mutableStateOf(false) }
+    var pendingCalendarStages by remember { mutableStateOf<List<StageDetail>>(emptyList()) }
+    val scope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
 
@@ -99,6 +114,11 @@ fun ItineraryDetailScreen(
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    // Itinerario eliminato: si torna alla lista, che si ricarica al resume.
+    LaunchedEffect(actionState.itineraryDeleted) {
+        if (actionState.itineraryDeleted) onBack()
     }
 
     LaunchedEffect(actionState.message, actionState.errorMessage) {
@@ -121,12 +141,70 @@ fun ItineraryDetailScreen(
         }
     }
 
-    val sharePublicLink: (String) -> Unit = { link ->
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, link)
+    // --- Calendario ---
+    // Singola tappa: apre l'app calendario con l'evento compilato (nessun permesso).
+    val addStageToCalendar: (StageDetail) -> Unit = { stage ->
+        val title = detail?.title.orEmpty()
+        try {
+            context.startActivity(CalendarExport.insertIntent(CalendarEvent.from(stage, title)))
+        } catch (e: ActivityNotFoundException) {
+            scope.launch { snackbarHostState.showSnackbar("Nessuna app calendario installata") }
         }
-        context.startActivity(Intent.createChooser(intent, "Condividi itinerario"))
+    }
+
+    fun insertSelected(stages: List<StageDetail>) {
+        val title = detail?.title.orEmpty()
+        isAddingToCalendar = true
+        scope.launch {
+            val result = CalendarExport.insertAll(context, stages.map { CalendarEvent.from(it, title) })
+            isAddingToCalendar = false
+            showCalendarSheet = false
+            val message = when (result) {
+                is CalendarExport.Result.Added ->
+                    if (result.count == 1) "1 evento aggiunto al calendario"
+                    else "${result.count} eventi aggiunti al calendario"
+                CalendarExport.Result.NoCalendar -> "Nessun calendario disponibile sul telefono"
+                is CalendarExport.Result.Failed -> result.message
+            }
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    // Piu' tappe insieme: serve il permesso al calendario, chiesto solo a questo punto.
+    val calendarPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        if (grants.values.all { it }) {
+            insertSelected(pendingCalendarStages)
+        } else {
+            scope.launch { snackbarHostState.showSnackbar("Permesso al calendario negato") }
+        }
+    }
+
+    val addSelectedToCalendar: (List<StageDetail>) -> Unit = { stages ->
+        val granted = listOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)
+            .all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }
+        if (granted) {
+            insertSelected(stages)
+        } else {
+            pendingCalendarStages = stages
+            calendarPermissionLauncher.launch(
+                arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)
+            )
+        }
+    }
+
+    // Condivide il programma come testo gia' formattato (giorni, orari, luoghi, note),
+    // leggibile in qualsiasi app senza installare TripFlow.
+    val shareItineraryText: () -> Unit = {
+        detail?.let { itinerary ->
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, itinerary.title)
+                putExtra(Intent.EXTRA_TEXT, ItineraryShareText.build(itinerary))
+            }
+            context.startActivity(Intent.createChooser(intent, "Condividi itinerario"))
+        }
     }
 
     Scaffold(
@@ -150,15 +228,25 @@ fun ItineraryDetailScreen(
                     }
                 },
                 actions = {
-                    if (detail != null && isOwner) {
+                    if (detail != null && detail.stages.isNotEmpty()) {
+                        IconButton(onClick = { showCalendarSheet = true }) {
+                            Icon(
+                                imageVector = Icons.Outlined.EventAvailable,
+                                contentDescription = "Aggiungi al calendario",
+                                tint = TripFlowColors.TextPrimary,
+                            )
+                        }
+                    }
+                    // Menu "altre opzioni": "Esporta testo" per tutti, le altre voci solo al proprietario.
+                    if (detail != null) {
                         Box {
                             IconButton(
                                 onClick = { visibilityMenuOpen = true },
                                 enabled = !actionState.isUpdatingVisibility,
                             ) {
                                 Icon(
-                                    imageVector = detail.visibility.icon(),
-                                    contentDescription = "Cambia visibilita'",
+                                    imageVector = Icons.Filled.MoreVert,
+                                    contentDescription = "Altre opzioni",
                                     tint = TripFlowColors.TextPrimary,
                                 )
                             }
@@ -166,17 +254,43 @@ fun ItineraryDetailScreen(
                                 expanded = visibilityMenuOpen,
                                 onDismissRequest = { visibilityMenuOpen = false },
                             ) {
-                                // SHARED non si sceglie da qui: diventa tale condividendo l'itinerario.
-                                listOf(Visibility.PRIVATE, Visibility.PUBLIC).forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text("Esporta testo") },
+                                    leadingIcon = { Icon(Icons.Outlined.Description, contentDescription = null) },
+                                    onClick = {
+                                        visibilityMenuOpen = false
+                                        shareItineraryText()
+                                    },
+                                )
+                                if (isOwner) {
+                                    HorizontalDivider()
                                     DropdownMenuItem(
-                                        text = { Text(option.label()) },
-                                        leadingIcon = { Icon(option.icon(), contentDescription = null) },
-                                        trailingIcon = {
-                                            if (detail.visibility == option) {
-                                                Icon(Icons.Filled.Check, contentDescription = "Attuale")
-                                            }
+                                        text = { Text("Cambia visibilità…") },
+                                        leadingIcon = { Icon(detail.visibility.icon(), contentDescription = null) },
+                                        onClick = {
+                                            visibilityMenuOpen = false
+                                            showVisibilityDialog = true
                                         },
-                                        onClick = { requestVisibility(option) },
+                                    )
+                                    HorizontalDivider()
+                                    DropdownMenuItem(
+                                        text = { Text("Condividi con un utente…") },
+                                        leadingIcon = { Icon(Icons.Filled.PersonAdd, contentDescription = null) },
+                                        onClick = {
+                                            visibilityMenuOpen = false
+                                            viewModel.openShares()
+                                        },
+                                    )
+                                    HorizontalDivider()
+                                    DropdownMenuItem(
+                                        text = { Text("Elimina itinerario", color = TripFlowColors.Error) },
+                                        leadingIcon = {
+                                            Icon(Icons.Filled.Delete, contentDescription = null, tint = TripFlowColors.Error)
+                                        },
+                                        onClick = {
+                                            visibilityMenuOpen = false
+                                            confirmDeleteItinerary = true
+                                        },
                                     )
                                 }
                             }
@@ -196,8 +310,8 @@ fun ItineraryDetailScreen(
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
                     text = { Text("Tappa", fontWeight = FontWeight.Medium) },
                     modifier = Modifier.padding(Dimens.screenPadding),
-                    containerColor = TripFlowColors.TextPrimary,
-                    contentColor = Color.White,
+                    containerColor = TripFlowColors.ButtonContainer,
+                    contentColor = TripFlowColors.ButtonContent,
                     shape = RoundedCornerShape(Dimens.radiusButton),
                 )
             }
@@ -216,9 +330,75 @@ fun ItineraryDetailScreen(
                     canEdit = canEdit,
                     onDeleteStage = { stageToDelete = it },
                     onAddStage = onAddStageClick,
-                    onSharePublicLink = sharePublicLink,
+                    onAddToCalendar = addStageToCalendar,
                 )
             },
+        )
+    }
+
+    if (confirmDeleteItinerary && detail != null) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!actionState.isDeletingItinerary) confirmDeleteItinerary = false
+            },
+            title = { Text("Eliminare l'itinerario?") },
+            text = {
+                Text("\"${detail.title}\" e tutte le sue tappe verranno eliminati definitivamente. Anche le persone con cui lo hai condiviso non lo vedranno piu'.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmDeleteItinerary = false
+                        viewModel.deleteItinerary()
+                    },
+                    enabled = !actionState.isDeletingItinerary,
+                ) {
+                    Text("Elimina", color = TripFlowColors.Error)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { confirmDeleteItinerary = false },
+                    enabled = !actionState.isDeletingItinerary,
+                ) { Text("Annulla") }
+            },
+            containerColor = TripFlowColors.Background,
+            titleContentColor = TripFlowColors.TextPrimary,
+            textContentColor = TripFlowColors.TextBody,
+        )
+    }
+
+    if (showCalendarSheet && detail != null) {
+        CalendarSheet(
+            stages = detail.stages,
+            isAdding = isAddingToCalendar,
+            onAdd = addSelectedToCalendar,
+            onDismiss = { if (!isAddingToCalendar) showCalendarSheet = false },
+        )
+    }
+
+    if (shareState.isOpen) {
+        ShareDialog(
+            state = shareState,
+            onShare = viewModel::shareWith,
+            onRemove = viewModel::removeShare,
+            onDismiss = viewModel::closeShares,
+        )
+    }
+
+    if (showVisibilityDialog && detail != null) {
+        VisibilityDialog(
+            current = detail.visibility,
+            isSaving = actionState.isUpdatingVisibility,
+            onConfirm = { target ->
+                showVisibilityDialog = false
+                if (target == Visibility.SHARED) {
+                    viewModel.switchToShared()
+                } else {
+                    requestVisibility(target)
+                }
+            },
+            onDismiss = { showVisibilityDialog = false },
         )
     }
 
@@ -286,8 +466,11 @@ private fun DetailContent(
     canEdit: Boolean,
     onDeleteStage: (StageDetail) -> Unit,
     onAddStage: () -> Unit,
-    onSharePublicLink: (String) -> Unit = {},
+    onAddToCalendar: (StageDetail) -> Unit = {},
 ) {
+    val days = remember(itinerary.stages, itinerary.startDate) {
+        groupStagesByDay(itinerary.stages, itinerary.startDate)
+    }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
@@ -296,38 +479,46 @@ private fun DetailContent(
             top = Dimens.gapM,
             bottom = 96.dp,
         ),
-        verticalArrangement = Arrangement.spacedBy(Dimens.gapM),
     ) {
         item {
-            ItineraryHeader(itinerary, onSharePublicLink)
+            ItineraryHeader(itinerary)
         }
 
         if (itinerary.stages.isEmpty()) {
             item {
-                EmptyStages(canEdit = canEdit, onAddStage = onAddStage)
+                Box(modifier = Modifier.padding(top = Dimens.gapM)) {
+                    EmptyStages(canEdit = canEdit, onAddStage = onAddStage)
+                }
             }
         } else {
-            itemsIndexed(
-                items = itinerary.stages,
-                key = { _, stage -> stage.id },
-            ) { index, stage ->
-                StageCard(
-                    stage = stage,
-                    position = index + 1,
-                    canEdit = canEdit,
-                    isDeleting = deletingStageId == stage.id,
-                    onDelete = { onDeleteStage(stage) },
-                )
+            // Programma per giorni: intestazione del giorno e timeline delle sue tappe.
+            days.forEach { day ->
+                item(key = "day-${day.date}") {
+                    Box(modifier = Modifier.padding(top = Dimens.gapM)) {
+                        DayHeader(day)
+                    }
+                }
+                itemsIndexed(
+                    items = day.stages,
+                    key = { _, stage -> stage.id },
+                ) { index, stage ->
+                    TimelineStop(
+                        stage = stage,
+                        isFirst = index == 0,
+                        isLast = index == day.stages.lastIndex,
+                        canEdit = canEdit,
+                        isDeleting = deletingStageId == stage.id,
+                        onDelete = { onDeleteStage(stage) },
+                        onAddToCalendar = { onAddToCalendar(stage) },
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ItineraryHeader(
-    itinerary: ItineraryDetail,
-    onSharePublicLink: (String) -> Unit = {},
-) {
+private fun ItineraryHeader(itinerary: ItineraryDetail) {
     Surface(
         color = TripFlowColors.Surface2,
         shape = RoundedCornerShape(Dimens.radiusCard),
@@ -369,40 +560,6 @@ private fun ItineraryHeader(
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(top = 2.dp),
             )
-            val publicToken = itinerary.publicToken
-            if (itinerary.visibility == Visibility.PUBLIC && !publicToken.isNullOrBlank()) {
-                PublicLinkRow(onShare = { onSharePublicLink(PublicLink.forToken(publicToken)) })
-            }
-        }
-    }
-}
-
-@Composable
-private fun PublicLinkRow(onShare: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = Dimens.gapS),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Filled.Public,
-                contentDescription = null,
-                tint = TripFlowColors.Accent,
-                modifier = Modifier.size(18.dp),
-            )
-            Text(
-                text = "Link pubblico attivo",
-                style = MaterialTheme.typography.bodyMedium,
-                color = TripFlowColors.TextBody,
-                modifier = Modifier.padding(start = Dimens.gapS),
-            )
-        }
-        TextButton(onClick = onShare) {
-            Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text("Condividi", modifier = Modifier.padding(start = 4.dp))
         }
     }
 }
@@ -446,127 +603,6 @@ private fun EmptyStages(
             if (canEdit) {
                 TextButton(onClick = onAddStage) {
                     Text("Aggiungi tappa")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun StageCard(
-    stage: StageDetail,
-    position: Int,
-    canEdit: Boolean,
-    isDeleting: Boolean,
-    onDelete: () -> Unit,
-) {
-    Surface(
-        color = TripFlowColors.Background,
-        shape = RoundedCornerShape(Dimens.radiusCard),
-        border = androidx.compose.foundation.BorderStroke(1.dp, TripFlowColors.Border),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            modifier = Modifier.padding(Dimens.gapL),
-            horizontalArrangement = Arrangement.spacedBy(Dimens.gapM),
-            verticalAlignment = Alignment.Top,
-        ) {
-            Surface(
-                color = TripFlowColors.AccentSoft,
-                shape = RoundedCornerShape(Dimens.radiusChip),
-                modifier = Modifier.size(34.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = position.toString(),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = TripFlowColors.Accent,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-            }
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = stage.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = TripFlowColors.TextPrimary,
-                )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(Dimens.gapM),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Schedule,
-                            contentDescription = null,
-                            tint = TripFlowColors.TextSecondary,
-                            modifier = Modifier.size(15.dp),
-                        )
-                        Text(
-                            text = "${stage.startTime} - ${stage.endTime}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TripFlowColors.TextSecondary,
-                        )
-                    }
-                    Text(
-                        text = Formatters.date(stage.date),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TripFlowColors.TextSecondary,
-                    )
-                }
-                if (!stage.location.isNullOrBlank()) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = TripFlowColors.TextSecondary,
-                            modifier = Modifier.size(15.dp),
-                        )
-                        Text(
-                            text = stage.location,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TripFlowColors.TextSecondary,
-                        )
-                    }
-                }
-                stage.description?.takeIf { it.isNotBlank() }?.let { description ->
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TripFlowColors.TextBody,
-                    )
-                }
-                StatusPill(stage.stopType.label())
-            }
-
-            if (canEdit) {
-                IconButton(
-                    onClick = onDelete,
-                    enabled = !isDeleting,
-                ) {
-                    if (isDeleting) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                            color = TripFlowColors.Accent,
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Elimina tappa",
-                            tint = TripFlowColors.TextSecondary,
-                        )
-                    }
                 }
             }
         }

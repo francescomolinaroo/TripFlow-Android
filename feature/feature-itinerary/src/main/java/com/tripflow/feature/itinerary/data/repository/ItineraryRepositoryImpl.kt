@@ -11,6 +11,9 @@ import com.tripflow.feature.itinerary.model.CatalogSearchResponse
 import com.tripflow.feature.itinerary.model.CreateItineraryRequest
 import com.tripflow.feature.itinerary.model.CreateStageRequest
 import com.tripflow.feature.itinerary.model.ItineraryDetail
+import com.tripflow.feature.itinerary.model.ItineraryShare
+import com.tripflow.feature.itinerary.data.remote.dto.ShareRequestDto
+import com.tripflow.feature.itinerary.data.remote.dto.ShareResponseDto
 import com.tripflow.feature.itinerary.model.ItinerarySummary
 import com.tripflow.feature.itinerary.model.StageDetail
 import com.tripflow.feature.itinerary.model.UpdateStageRequest
@@ -146,6 +149,54 @@ class ItineraryRepositoryImpl(
             handleError(e)
         }
     }
+
+    override suspend fun getShares(itineraryId: String): UiState<List<ItineraryShare>> = withContext(Dispatchers.IO) {
+        try {
+            val shares = authorized { api.getShares(itineraryId) }
+            UiState.Success(shares.map { it.toShare(resolveName(it.sharedWithUserId)) })
+        } catch (e: Exception) {
+            handleError(e)
+        }
+    }
+
+    override suspend fun shareItinerary(
+        itineraryId: String,
+        userId: String,
+        canEdit: Boolean
+    ): UiState<ItineraryShare> = withContext(Dispatchers.IO) {
+        try {
+            val share = authorized { api.shareItinerary(itineraryId, ShareRequestDto(userId, canEdit)) }
+            UiState.Success(share.toShare(resolveName(share.sharedWithUserId)))
+        } catch (e: Exception) {
+            handleError(e)
+        }
+    }
+
+    override suspend fun removeShare(itineraryId: String, userId: String): UiState<Unit> = withContext(Dispatchers.IO) {
+        try {
+            authorized { api.removeShare(itineraryId, userId) }
+            UiState.Success(Unit)
+        } catch (e: Exception) {
+            handleError(e)
+        }
+    }
+
+    // Nome e cognome da user-auth-service; best-effort: in caso di errore resta il codice.
+    private suspend fun resolveName(userId: String): String? = try {
+        authorized { api.getUserByKeycloakId(userId) }
+            .let { "${it.firstName} ${it.lastName}".trim() }
+            .takeIf { it.isNotBlank() }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        null
+    }
+
+    private fun ShareResponseDto.toShare(displayName: String?) = ItineraryShare(
+        userId = sharedWithUserId,
+        canEdit = canEdit,
+        displayName = displayName,
+    )
 
     // Esegue la chiamata; se il token e' scaduto (401) lo rinnova e riprova una volta.
     private suspend fun <T> authorized(call: suspend () -> T): T {

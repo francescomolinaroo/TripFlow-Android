@@ -120,4 +120,35 @@ class ItineraryMapperTest {
 
         assertEquals("3f2c7a1e-0000-0000-0000-000000000001", ItineraryMapper.toDetail(dto).publicToken)
     }
+
+    @Test
+    fun `catalog stop stores the catalog item name as title`() {
+        val request = CreateStageRequest(
+            dayNumber = 1,
+            date = LocalDate.of(2030, 10, 8),
+            startTime = "10:00",
+            endTime = "12:00",
+            source = StageSource.FromCatalog(
+                catalogItemId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                stopType = StopType.ACTIVITY,
+                title = "Galleria degli Uffizi",
+            ),
+            notes = null,
+        )
+
+        val dto = ItineraryMapper.toDto(request)
+
+        assertEquals("Galleria degli Uffizi", dto.customTitle)
+        assertEquals("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", dto.attivitaId)
+    }
+
+    @Test
+    fun `catalog stop without name falls back to a type specific title`() {
+        val stage = ItineraryMapper.toStage(
+            StopResponseDto(id = "9", stopOrder = 1, stopType = "ACTIVITY", attivitaId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            LocalDate.of(2030, 10, 8),
+        )
+
+        assertEquals("Attività dal catalogo", stage.title)
+    }
 }

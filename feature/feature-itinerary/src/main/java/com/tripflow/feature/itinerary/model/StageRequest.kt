@@ -6,7 +6,10 @@ import java.util.UUID
 sealed interface StageSource {
     data class FromCatalog(
         val catalogItemId: UUID,
-        val stopType: StopType = StopType.TRIP
+        val stopType: StopType = StopType.TRIP,
+        // Nome del viaggio/attivita' scelto: salvato come titolo della tappa, cosi'
+        // dettaglio e lista mostrano "Visita Uffizi" e non un testo generico.
+        val title: String? = null
     ) : StageSource {
         init {
             require(stopType != StopType.CUSTOM) {

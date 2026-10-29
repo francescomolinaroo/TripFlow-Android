@@ -203,4 +203,16 @@ class AddStopViewModelTest {
         assertNotNull(state.addedStageId)
         assertEquals(false, state.isSubmitting)
     }
+
+    @Test
+    fun `addStop rejects a date outside the itinerary period`() = runTest {
+        val viewModel = AddStopViewModel(FakeItineraryRepository())
+        viewModel.initialize("1")
+        viewModel.onCustomTitleChange("Fuori periodo")
+        viewModel.onDateChange(java.time.LocalDate.of(2026, 9, 20))
+
+        viewModel.addStop()
+
+        assertEquals("La data deve essere compresa nel periodo dell'itinerario", viewModel.uiState.value.dateError)
+    }
 }

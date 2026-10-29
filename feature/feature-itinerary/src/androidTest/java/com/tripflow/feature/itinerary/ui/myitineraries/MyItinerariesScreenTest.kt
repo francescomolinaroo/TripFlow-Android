@@ -43,9 +43,9 @@ class MyItinerariesScreenTest {
         composeRule.onNodeWithText("Trekking Dolomiti").assertExists()
         composeRule.onNodeWithText("Sicilia on the road").assertExists()
 
-        composeRule.onNodeWithText("PRIVATE").assertExists()
-        composeRule.onNodeWithText("SHARED").assertExists()
-        composeRule.onNodeWithText("PUBLIC").assertExists()
+        composeRule.onNodeWithText("Privato").assertExists()
+        composeRule.onNodeWithText("Condiviso").assertExists()
+        composeRule.onNodeWithText("Pubblico").assertExists()
     }
 
     @Test
